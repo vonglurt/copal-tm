@@ -479,23 +479,23 @@ fn memory(app: &mut App, c: &mut Canvas, r: Rect) {
     // The in-plot extent labels of the reference image: they cost no layout
     // and they turn a shape into a quantity.
     let (lo, hi) = app.hist.mem.extent(app.cfg.history_span);
-    let dim = t.magenta.on(t.panel, 0.55);
-    c.text(
+    // Bright, and over whatever is already there: a label that punched a
+    // panel-coloured hole in the fill would damage the shape it describes.
+    let label = t.bloom(t.magenta);
+    c.text_keep_bg(
         plot.x + 1,
         plot.y,
         10,
         &fmt::kb((hi * m.total_kb as f32) as u64),
-        dim,
-        t.panel,
+        label,
         DIM,
     );
-    c.text(
+    c.text_keep_bg(
         plot.x + 1,
         plot.bottom() - 1,
         10,
         &fmt::kb((lo * m.total_kb as f32) as u64),
-        dim,
-        t.panel,
+        label,
         DIM,
     );
 

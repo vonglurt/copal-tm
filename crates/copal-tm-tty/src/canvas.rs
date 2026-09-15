@@ -252,6 +252,24 @@ impl Canvas {
         n
     }
 
+    /// Draw `s` keeping whatever ground is already there.
+    ///
+    /// The in-plot extent labels of the Memory panel sit *on* the filled area,
+    /// and painting a panel-coloured ground behind them would punch a hole in
+    /// the very shape they are labelling.
+    pub fn text_keep_bg(&mut self, x: i32, y: i32, max: i32, s: &str, fg: Rgb, attr: u8) -> i32 {
+        let mut n = 0;
+        for ch in s.chars() {
+            if n >= max {
+                break;
+            }
+            let bg = self.get(x + n, y).map(|c| c.bg).unwrap_or(Rgb(0, 0, 0));
+            self.put(x + n, y, ch, fg, bg, attr);
+            n += 1;
+        }
+        n
+    }
+
     /// Draw `s` so that its last column is `right - 1`.  Numeric readouts are
     /// all right-aligned, which is what makes a column of figures scannable.
     // A cell has a position, a glyph, two colours and its attributes; a
