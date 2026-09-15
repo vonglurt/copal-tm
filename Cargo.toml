@@ -15,7 +15,7 @@ edition = "2021"
 rust-version = "1.70"
 license = "MIT"
 authors = ["Paul Richeson", "Claude"]
-repository = "https://github.com/vonglurt/taskmanagergg"
+repository = "https://github.com/vonglurt/copal-tm"
 
 # No external crates, and that is the design.  orrery states the reason and
 # ascitty follows it: a fleet node never reaches the internet, so a dependency
