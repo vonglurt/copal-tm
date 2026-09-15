@@ -1,0 +1,12 @@
+[package]
+name = "copal-tm-ui"
+description = "The widgets of Copal Task Manager: title strips, ladder meters, strip charts, stat tiles and tables"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+copal-tm-tty = { workspace = true }

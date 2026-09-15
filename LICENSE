@@ -1,6 +1,7 @@
+
 MIT License
 
-Copyright (c) 2026 vonglurt
+Copyright (c) 2026 Paul Richeson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--------------------------------------------------------------------------------
+SCOPE
+
+The licence above covers everything in this repository: the four crates under
+crates/, the Makefile and the documents under docs/. All of it is original
+work, and it has no dependencies beyond the Rust standard library.
+
+copal-tm reads /proc and /sys on Linux and sends signals with kill(2). It is
+built for Copal Linux, which is an aggregation of Alpine Linux, not a
+derivative work of it; Alpine and its packages remain under their own licences.

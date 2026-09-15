@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Paul Richeson
+[workspace]
+resolver = "2"
+members = [
+    "crates/copal-tm-tty",
+    "crates/copal-tm-probe",
+    "crates/copal-tm-ui",
+    "crates/copal-tm",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+license = "MIT"
+authors = ["Paul Richeson", "Claude"]
+repository = "https://github.com/vonglurt/taskmanagergg"
+
+# No external crates, and that is the design.  orrery states the reason and
+# ascitty follows it: a fleet node never reaches the internet, so a dependency
+# is a crate fetch that fails on the one machine this is meant to run on.
+# These four depend only on each other and on std.
+[workspace.dependencies]
+copal-tm-tty = { path = "crates/copal-tm-tty", version = "0.1.0" }
+copal-tm-probe = { path = "crates/copal-tm-probe", version = "0.1.0" }
+copal-tm-ui = { path = "crates/copal-tm-ui", version = "0.1.0" }
+
+# The instrument panel redraws every cell it owns each tick; a debug build of
+# a per-cell inner loop is slow enough to be visible, so dev is optimised too.
+[profile.dev]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
