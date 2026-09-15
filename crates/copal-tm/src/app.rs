@@ -201,6 +201,56 @@ impl App {
         }
     }
 
+    /// Put up one overlay by name, selecting a process that shows it at its
+    /// most interesting. Used by `--frame --open NAME`, so the pictures in the
+    /// documentation are rendered by the program and cannot drift from it.
+    pub fn open_overlay(&mut self, name: &str) {
+        if name == "collapsed" {
+            // Every parent folded, which is the state the roll-up is worth
+            // showing in.
+            let parents: Vec<i32> = self
+                .rows
+                .iter()
+                .filter(|r| r.expandable && r.depth > 1)
+                .map(|r| r.pid)
+                .collect();
+            self.collapsed.extend(parents);
+            self.rebuild_rows();
+            return;
+        }
+        let (want, overlay) = match name {
+            "halt" => ("node", Overlay::Halt),
+            "services" => ("stubborn", Overlay::Services),
+            "inspector" | "network" => ("nginx", Overlay::Inspector),
+            "transcript" => ("", Overlay::Transcript),
+            "help" | "keys" => ("", Overlay::Help),
+            _ => return,
+        };
+        if !want.is_empty() {
+            if let Some(pid) = self
+                .snap
+                .procs
+                .iter()
+                .find(|p| p.name == want)
+                .map(|p| p.pid)
+            {
+                if let Some(n) = self.rows.iter().position(|r| r.pid == pid) {
+                    self.sel = n;
+                    self.clamp_scroll();
+                }
+                self.load_detail(pid);
+            }
+        }
+        if name == "network" {
+            self.inspector_tab = 3;
+        }
+        if overlay == Overlay::Halt {
+            self.open_halt();
+        } else {
+            self.overlay = overlay;
+        }
+    }
+
     pub fn selected_pid(&self) -> Option<i32> {
         self.rows.get(self.sel).map(|r| r.pid)
     }

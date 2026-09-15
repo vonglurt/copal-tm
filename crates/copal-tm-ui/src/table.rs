@@ -162,7 +162,11 @@ pub fn guides(
     max: i32,
     ancestors_last: &[bool],
     is_last: bool,
-    expandable: Option<bool>,
+    // `Some((open, hidden))` for a row with children: the disclosure triangle,
+    // and - when it is closed - how many descendants it is holding. The count
+    // rides on the triangle rather than trailing the name, so it cannot be
+    // mistaken for part of the command line.
+    expandable: Option<(bool, usize)>,
     bg: Rgb,
 ) -> i32 {
     let [vert, tee, elbow, dash] = t.cs.tree();
@@ -183,7 +187,7 @@ pub fn guides(
         c.put(x + n + 1, y, dash, t.rule, bg, 0);
         n += 2;
     }
-    if let Some(open) = expandable {
+    if let Some((open, hidden)) = expandable {
         if n + 2 <= max {
             c.put(
                 x + n,
@@ -193,8 +197,13 @@ pub fn guides(
                 bg,
                 0,
             );
-            c.put(x + n + 1, y, ' ', t.rule, bg, 0);
-            n += 2;
+            n += 1;
+            if !open && hidden > 0 {
+                let count = hidden.to_string();
+                n += c.text(x + n, y, (max - n - 1).max(0), &count, t.cyan, bg, 0);
+            }
+            c.put(x + n, y, ' ', t.rule, bg, 0);
+            n += 1;
         }
     }
     n
@@ -262,7 +271,15 @@ mod tests {
         let t = Theme::copal(Charset::Full);
         let mut c = Canvas::new(20, 1);
         c.clear(t.panel);
-        guides(&mut c, &t, 0, 0, 20, &[], false, Some(false), t.panel);
-        assert_eq!(c.get(0, 0).unwrap().ch, '\u{25b8}');
+        guides(&mut c, &t, 0, 0, 20, &[], false, Some((false, 12)), t.panel);
+        let row: String = (0..4).map(|x| c.get(x, 0).unwrap().ch).collect();
+        assert_eq!(row, "\u{25b8}12 ", "the count rides on the triangle");
+        c.clear(t.panel);
+        guides(&mut c, &t, 0, 0, 20, &[], false, Some((true, 12)), t.panel);
+        assert_eq!(
+            c.get(0, 0).unwrap().ch,
+            '\u{25be}',
+            "an open parent shows no count"
+        );
     }
 }

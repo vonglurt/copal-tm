@@ -52,7 +52,15 @@ fn main() {
             .split_once(['x', 'X'])
             .and_then(|(a, b)| Some((a.trim().parse().ok()?, b.trim().parse().ok()?)))
             .unwrap_or((132, 40));
-        print!("{}", still(cfg, notes, w, h));
+        let open = args
+            .iter()
+            .find_map(|a| a.strip_prefix("--open="))
+            .map(|s| s.to_string())
+            .or_else(|| {
+                let i = args.iter().position(|a| a == "--open")?;
+                args.get(i + 1).cloned()
+            });
+        print!("{}", still(cfg, notes, w, h, open.as_deref()));
         return;
     }
     if let Err(e) = run(cfg, notes) {
@@ -65,12 +73,18 @@ fn main() {
 /// One frame, as the escape sequence that would draw it. Always against the
 /// simulated probe on a machine with no `/proc`, and always after enough ticks
 /// to give the histories something to show.
-fn still(mut cfg: Config, notes: Vec<String>, w: i32, h: i32) -> String {
+fn still(mut cfg: Config, notes: Vec<String>, w: i32, h: i32, open: Option<&str>) -> String {
     let truecolor = cfg.truecolor;
     cfg.mouse = false;
     let mut app = App::new(cfg, notes);
     for _ in 0..240 {
         app.tick();
+    }
+    // `--open NAME` puts an overlay up, so the documented pictures of the
+    // Inspector and the halt plan are rendered by the program rather than
+    // drawn by hand and left to drift.
+    if let Some(name) = open {
+        app.open_overlay(name);
     }
     let mut canvas = Canvas::new(w, h);
     canvas.truecolor = truecolor;

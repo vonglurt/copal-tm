@@ -834,7 +834,11 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
                 cw,
                 &row.ancestors_last,
                 row.is_last,
-                if row.expandable { Some(row.open) } else { None },
+                if row.expandable {
+                    Some((row.open, row.hidden))
+                } else {
+                    None
+                },
                 bg,
             )
         } else {
@@ -851,11 +855,7 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
         if left > 0 {
             let name_w = (p.name.chars().count() as i32).min(left);
             c.text(x0 + used, y, name_w, &p.name, row_fg, bg, BOLD);
-            let mut x = x0 + used + name_w;
-            if row.hidden > 0 && x + 5 < x0 + cw {
-                let tag = format!(" \u{25b8}{}", row.hidden);
-                x += c.text(x, y, x0 + cw - x, &tag, t.cyan, bg, 0);
-            }
+            let x = x0 + used + name_w;
             // The arguments in dim, so a long command line stays scannable.
             if x + 2 < x0 + cw && !p.cmdline.is_empty() {
                 let args = p.cmdline.split_once(' ').map(|(_, a)| a).unwrap_or("");

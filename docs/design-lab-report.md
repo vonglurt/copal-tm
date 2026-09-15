@@ -573,8 +573,9 @@ filter text when one is active.
 - **Tree mode** (`t` toggles; the default). Children are indented 2 per level
   with guides `│ ├ ╰ ─` in `rule`. A collapsible parent carries `▾`/`▸`, and
   a **collapsed parent rolls its descendants up into itself**: its CPU% and
-  RSS become the subtree's totals and it shows `▸ 12` — the count of hidden
-  descendants — after its name in `dim`. This is the feature that makes a
+  RSS become the subtree's totals, and the count of hidden descendants rides on
+  the closed triangle itself — `▸9 foot` — rather than trailing the name, where
+  it would read as part of the command line. This is the feature that makes a
   browser with forty renderer processes readable, and it is why the tree is
   the default rather than the flat list.
 - **Selection.** A full-width bar in `sel` with `▎` in `sel_edge` at the left.
