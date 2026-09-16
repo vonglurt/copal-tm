@@ -37,4 +37,5 @@ package() {
 }
 
 sha512sums="
+32e7f8c805b357f19e5bfa1895cbd08f1813be7c65e3597cd7a7e18eb89fe5aec20cfe6dd1a40b0e1eac123e31ef675e3c0b85598317687ea3a0e92d86eb3455  copal-tm-0.1.2.tar.gz
 "
