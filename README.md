@@ -218,7 +218,7 @@ its period and the reason for the period.
 
 ## Zero dependencies, and that is the design
 
-Four crates that depend only on each other and on `std`. Not one external crate,
+One crate, depending on nothing but `std`. Not one external crate,
 ever — orrery states the reason and ascitty follows it: **a Copal fleet node
 never reaches the internet, so a dependency is a crate fetch that fails on the
 one machine this is meant to run on.**
@@ -227,27 +227,32 @@ So the terminal layer is ours: raw mode is two `stty` flags, the alternate
 screen is two escape sequences, the size comes back on the key stream from
 `CSI 18 t`, and the canvas writes only the cells that changed.
 
-| crate | what it owns |
+One crate named after the program, and three modules inside it:
+
+| module | what it owns |
 |---|---|
-| `copal-tm-tty` | colour, a damage-tracked cell canvas, the glyph vocabulary and its fallbacks, raw mode, key decoding |
-| `copal-tm-probe` | every reading — `/proc`, `/sys`, and the simulation — plus signal dispositions and halt plans |
-| `copal-tm-ui` | the widgets: title strips, ladder meters, strip charts, stat tiles, tables |
-| `copal-tm` | the binary: configuration, layout, the event loop, the Transcript |
+| `tty` | colour, a damage-tracked cell canvas, the glyph vocabulary and its fallbacks, raw mode, key decoding |
+| `machine` | every reading — `/proc`, `/sys`, and the simulation — plus signal dispositions and halt plans |
+| `ui` | the widgets: title strips, ladder meters, strip charts, stat tiles, tables |
+
+The binary — configuration, layout, the event loop, the Transcript — is the
+same crate's `main.rs`. There is one name on crates.io, one version, and
+nothing to publish in dependency order.
 
 ## Build
 
 ```sh
 make            # the release binary — one file, no shared libraries but musl's
 make run        # build it and run it here
-make demo       # the whole interface against the simulated probe, on any machine
+make demo       # the whole interface against the simulation, on any machine
 make shot       # render one frame to stdout; FRAME=80x24 make shot
-make test       # 95 tests, no terminal required
+make test       # 98 tests, no terminal required
 make check      # fmt, clippy -D warnings, tests
 make install    # into ~/.local/bin
 ```
 
-It targets Alpine and was written on a Mac. Everything but the probe's Linux
-back end is portable, and on a machine with no `/proc` the probe makes plausible
+It targets Alpine and was written on a Mac. Everything but the `machine`
+module's Linux back end is portable, and on a machine with no `/proc` it makes plausible
 readings over a synthetic process tree that contains — deliberately — every case
 the halt ladder reasons about: a wrapped child, a zombie, a `D`-state, a stopped
 process, a supervised daemon, and one that ignores `SIGTERM`. It never pretends:

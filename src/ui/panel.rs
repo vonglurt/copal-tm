@@ -11,9 +11,9 @@
 //! - **Document**, for the wide card: a sentence-case label in plain text, no
 //!   filler, readout still right. This is a *document*.
 
-use copal_tm_tty::{Canvas, Rect, Rgb, BOLD};
+use crate::tty::{Canvas, Rect, Rgb, BOLD};
 
-use crate::theme::Theme;
+use crate::ui::theme::Theme;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Title {
@@ -164,7 +164,7 @@ pub fn shadow(c: &mut Canvas, r: Rect) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use copal_tm_tty::Charset;
+    use crate::tty::Charset;
 
     #[test]
     fn a_panel_body_is_three_rows_shorter_than_its_frame() {

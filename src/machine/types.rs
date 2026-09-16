@@ -5,12 +5,12 @@
 //! One `Snapshot` per tick, and every widget in `copal-tm-ui` draws from it.
 //! Nothing here reads a file; the back ends in `linux` and `sim` fill these in.
 
-use crate::signals::SigMask;
+use crate::machine::signals::SigMask;
 
 /// Everything sampled on one tick.
 #[derive(Clone, Debug, Default)]
 pub struct Snapshot {
-    /// Monotonic seconds since the probe started.
+    /// Monotonic seconds since the machine started.
     pub t: f64,
     /// Seconds since the previous snapshot; every rate is divided by it.
     pub dt: f64,
@@ -35,7 +35,7 @@ pub struct Snapshot {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Aged<T> {
     pub value: T,
-    /// Probe time at which this was actually read.
+    /// Machine time at which this was actually read.
     pub at: f64,
 }
 

@@ -7,7 +7,7 @@
 //! opacity, which is why a nearly-empty meter still reads as *that* meter and
 //! four columns side by side stay four distinguishable objects.
 
-use copal_tm_tty::{Charset, Rgb};
+use crate::tty::{Charset, Rgb};
 
 #[derive(Clone, Debug)]
 pub struct Theme {

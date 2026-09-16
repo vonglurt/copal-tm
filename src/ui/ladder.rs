@@ -10,9 +10,9 @@
 //! the hue for the lit run, **bloom** for the topmost lit segment, and
 //! **partial** for the one segment straddling the value.
 
-use copal_tm_tty::{ramp, Canvas, Rect, Rgb, BOLD};
+use crate::tty::{ramp, Canvas, Rect, Rgb, BOLD};
 
-use crate::theme::Theme;
+use crate::ui::theme::Theme;
 
 /// A meter's colour: one hue, or a ramp that says the same thing as the
 /// height does — the Temp column and the System Pressure tile.
@@ -152,7 +152,7 @@ pub fn horizontal(c: &mut Canvas, t: &Theme, r: Rect, value: f32, hue: Hue, stal
 pub fn micro(c: &mut Canvas, t: &Theme, x: i32, y: i32, value: f32, hue: Rgb, dim: bool) {
     let v = value.clamp(0.0, 1.0);
     let idx = (v * 8.0).round().clamp(0.0, 8.0) as usize;
-    let ch = copal_tm_tty::EIGHTHS[idx];
+    let ch = crate::tty::EIGHTHS[idx];
     let col = if dim { hue.on(t.panel, 0.55) } else { hue };
     let col = if idx == 0 { t.track(hue) } else { col };
     c.put(
@@ -172,9 +172,9 @@ fn clip(s: &str, w: i32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use copal_tm_tty::Charset;
+    use crate::tty::Charset;
 
-    fn probe(value: f32) -> Vec<Rgb> {
+    fn cells(value: f32) -> Vec<Rgb> {
         let t = Theme::copal(Charset::Full);
         let mut c = Canvas::new(4, 8);
         c.clear(t.panel);
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn an_empty_meter_is_still_its_own_colour() {
         let t = Theme::copal(Charset::Full);
-        let col = probe(0.0);
+        let col = cells(0.0);
         assert!(col.iter().all(|c| *c == t.track(t.green)));
         assert_ne!(col[0], t.panel, "an unlit track is not the ground");
     }
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn a_full_meter_lights_every_segment() {
         let t = Theme::copal(Charset::Full);
-        let col = probe(1.0);
+        let col = cells(1.0);
         assert!(col.iter().all(|c| *c == t.green || *c == t.bloom(t.green)));
         assert_eq!(
             *col.last().unwrap(),
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn a_half_meter_lights_the_bottom_half_only() {
         let t = Theme::copal(Charset::Full);
-        let col = probe(0.5);
+        let col = cells(0.5);
         assert_eq!(col[0], t.green);
         assert_eq!(col[3], t.bloom(t.green));
         assert_eq!(col[4], t.track(t.green));

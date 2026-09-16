@@ -24,8 +24,8 @@ SOFTWARE.
 --------------------------------------------------------------------------------
 SCOPE
 
-The licence above covers everything in this repository: the four crates under
-crates/, the Makefile and the documents under docs/. All of it is original
+The licence above covers everything in this repository: the crate under src/,
+the Makefile and the documents under docs/. All of it is original
 work, and it has no dependencies beyond the Rust standard library.
 
 copal-tm reads /proc and /sys on Linux and sends signals with kill(2). It is

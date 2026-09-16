@@ -5,8 +5,8 @@
 # `copal-build` expects to find beside a Cargo.toml.
 #
 # The program targets Alpine and is written on a Mac.  Everything but the
-# probe's Linux back end is portable, and `make demo` runs the whole
-# interface against the simulated probe on either machine.
+# `machine` module's Linux back end is portable, and `make demo` runs the
+# whole interface against the simulation on either machine.
 #
 # Requires: cargo.  Nothing else, ever - see the no-dependency rule in
 # docs/design-lab-report.md, Section I-B.
@@ -16,10 +16,7 @@ BIN    = target/release/copal-tm
 PREFIX ?= $(HOME)/.local
 FRAME  ?= 132x40
 
-# The four crates, in the order they must be published.
-CRATES = copal-tm-tty copal-tm-probe copal-tm-ui copal-tm
-
-.PHONY: all build run debug demo shot test check fmt clippy install uninstall dist publish clean help
+.PHONY: all build run debug demo shot plain test check fmt clippy install uninstall dist publish clean help
 
 all: build
 
@@ -27,14 +24,14 @@ help:
 	@echo 'make build      the release binary, target/release/copal-tm'
 	@echo 'make run        build it and run it in this terminal'
 	@echo 'make debug      run the debug build, logging to /tmp/copal-tm.log'
-	@echo 'make demo       run against the simulated probe, whatever the machine'
+	@echo 'make demo       run against the simulation, whatever the machine'
 	@echo 'make shot       render one frame to stdout (FRAME=132x40)'
-	@echo 'make test       cargo test --workspace'
+	@echo 'make test       cargo test'
 	@echo 'make check      fmt --check, clippy -D warnings, and the tests'
 	@echo 'make fmt        cargo fmt'
 	@echo 'make install    into $(PREFIX)/bin'
-	@echo 'make dist       package each crate, without pushing anything'
-	@echo 'make publish    the four cargo publish calls, in dependency order'
+	@echo 'make dist       package the crate, without pushing anything'
+	@echo 'make publish    the one cargo publish call'
 	@echo 'make clean      cargo clean'
 
 build $(BIN):
@@ -63,36 +60,32 @@ plain: build
 	@$(BIN) --simulate --frame=$(FRAME) | perl -pe 's/\e\[[0-9;]*[A-Za-z]//g'
 
 test:
-	$(CARGO) test --workspace
+	$(CARGO) test
 
 fmt:
 	$(CARGO) fmt
 
 clippy:
-	$(CARGO) clippy --workspace --all-targets -- -D warnings
+	$(CARGO) clippy --all-targets -- -D warnings
 
 check:
 	$(CARGO) fmt --check
-	$(CARGO) clippy --workspace --all-targets -- -D warnings
-	$(CARGO) test --workspace
+	$(CARGO) clippy --all-targets -- -D warnings
+	$(CARGO) test
 
 install: build
-	$(CARGO) install --path crates/copal-tm --root $(PREFIX) --force
+	$(CARGO) install --path . --root $(PREFIX) --force
 
 uninstall:
 	$(CARGO) uninstall --root $(PREFIX) copal-tm
 
 dist:
-	@for c in $(CRATES); do echo "== $$c"; $(CARGO) package -p $$c --allow-dirty || exit 1; done
+	$(CARGO) package --allow-dirty
 
-# Publishing is gated on a clean check, in this tree, now.  Nothing goes to
-# crates.io that has not been built and looked at first.
+# One crate, so one publish, and it is gated on a clean check in this tree,
+# now.  Nothing goes to crates.io that has not been built and looked at first.
 publish: check
-	@for c in $(CRATES); do \
-	  echo "== publish $$c"; \
-	  $(CARGO) publish -p $$c || exit 1; \
-	  sleep 20; \
-	done
+	$(CARGO) publish
 
 clean:
 	$(CARGO) clean

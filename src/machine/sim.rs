@@ -4,7 +4,7 @@
 //!
 //! The target is Alpine; the desk this is written at is a Mac, which has no
 //! `/proc` at all.  Rather than develop the interface blind and carry it to a
-//! virtual machine to look at it, the probe has a second back end that
+//! virtual machine to look at it, the machine has a second back end that
 //! produces plausible, seeded, slowly drifting readings and a synthetic
 //! process tree.  `make demo` runs against it on either machine.
 //!
@@ -18,8 +18,8 @@
 //! It is never silent about being a simulation: `Snapshot::simulated` is set,
 //! the status bar shows `SIMULATED`, and the first Transcript line says so.
 
-use crate::signals::SigMask;
-use crate::types::*;
+use crate::machine::signals::SigMask;
+use crate::machine::types::*;
 
 /// A small linear congruential generator.  Numerical Recipes' constants; it
 /// only has to look like noise, not resist anybody.
@@ -801,7 +801,7 @@ fn synthetic_tree() -> Vec<Proc> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::halt;
+    use crate::machine::halt;
 
     #[test]
     fn the_tree_contains_every_case_the_halt_plan_reasons_about() {

@@ -6,11 +6,11 @@
 //! headline, a line of qualification, and a meter. Four of them make the rail
 //! along the bottom of the dashboard.
 
-use copal_tm_tty::{Canvas, Rect, BOLD, DIM};
+use crate::tty::{Canvas, Rect, BOLD, DIM};
 
-use crate::ladder::{self, Hue};
-use crate::panel::{self, Panel, Title};
-use crate::theme::Theme;
+use crate::ui::ladder::{self, Hue};
+use crate::ui::panel::{self, Panel, Title};
+use crate::ui::theme::Theme;
 
 pub struct Tile<'a> {
     pub name: &'a str,
@@ -96,7 +96,7 @@ pub fn draw(c: &mut Canvas, t: &Theme, r: Rect, tile: &Tile) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use copal_tm_tty::Charset;
+    use crate::tty::Charset;
 
     #[test]
     fn a_tile_puts_its_headline_at_the_right_edge_and_its_meter_at_the_foot() {

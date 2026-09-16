@@ -12,8 +12,10 @@
 //! testable: every case below is a unit test over a synthetic process table,
 //! and none of them ends anything.
 
-use crate::signals::{Disposition, SigMask, Signal, SIGCONT, SIGHUP, SIGINT, SIGKILL, SIGTERM};
-use crate::types::{Proc, Supervision};
+use crate::machine::signals::{
+    Disposition, SigMask, Signal, SIGCONT, SIGHUP, SIGINT, SIGKILL, SIGTERM,
+};
+use crate::machine::types::{Proc, Supervision};
 
 /// The programs that stand in front of other programs.  When one of these is
 /// the parent *and* has a single child, signalling the child alone tends to

@@ -11,9 +11,9 @@
 //! The dot grid is generic over its resolution so the fallbacks are the same
 //! code at a coarser scale: braille 2×4, half blocks 1×2, ASCII 1×1.
 
-use copal_tm_tty::{half_block, Braille, Canvas, Charset, Rect, Rgb, BOLD, DIM, EIGHTHS};
+use crate::tty::{half_block, Braille, Canvas, Charset, Rect, Rgb, BOLD, DIM, EIGHTHS};
 
-use crate::theme::Theme;
+use crate::ui::theme::Theme;
 
 /// Which axis a series is measured against. The right axis belongs to
 /// temperature alone, and is drawn in temperature's colour.

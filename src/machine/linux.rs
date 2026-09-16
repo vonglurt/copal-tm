@@ -16,8 +16,8 @@ use std::fs;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
-use crate::signals::SigMask;
-use crate::types::*;
+use crate::machine::signals::SigMask;
+use crate::machine::types::*;
 
 /// `/proc` times are in USER_HZ, which is fixed at 100 on Linux whatever
 /// `CONFIG_HZ` is set to.  This is the one constant that does not need

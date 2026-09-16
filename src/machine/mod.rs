@@ -3,7 +3,7 @@
 //! Every reading `copal-tm` takes, and the reasoning about what may be done
 //! with a process once it has been read.
 //!
-//! Two back ends behind one `Probe`: `linux`, which reads `/proc` and `/sys`
+//! Two back ends behind one `Machine`: `linux`, which reads `/proc` and `/sys`
 //! on the schedule of the design report's Section VII, and `sim`, which makes
 //! plausible readings on a machine that has neither.  Which one is compiled
 //! in is decided by the target, and the choice is visible in every snapshot -
@@ -31,7 +31,7 @@ pub use ring::Ring;
 pub use signals::{Disposition, SigMask, Signal};
 pub use types::*;
 
-/// Which back end a `Probe` is using.
+/// Which back end a `Machine` is using.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
     /// `/proc` and `/sys` on this machine.
@@ -40,7 +40,7 @@ pub enum Source {
     Simulated,
 }
 
-// One of these exists per program: built once in Probe::new and held for the
+// One of these exists per program: built once in Machine::new and held for the
 // run, so the 264 bytes between the variants are never multiplied by anything.
 // Boxing the native back end to even them out would put a pointer chase in
 // tick(), which samples every core and every visible process on every tick.
@@ -52,7 +52,7 @@ enum Inner {
     Sim(sim::Backend),
 }
 
-pub struct Probe {
+pub struct Machine {
     inner: Inner,
     start: std::time::Instant,
     last: f64,
@@ -64,29 +64,29 @@ pub struct Probe {
     pub root: bool,
 }
 
-impl Probe {
+impl Machine {
     /// The native back end where there is one, otherwise the simulation.
-    pub fn new() -> Probe {
+    pub fn new() -> Machine {
         #[cfg(target_os = "linux")]
         {
             if std::path::Path::new("/proc/stat").exists() {
-                return Probe::with(Inner::Native(native::Backend::new()), Source::Native);
+                return Machine::with(Inner::Native(native::Backend::new()), Source::Native);
             }
         }
-        Probe::with(Inner::Sim(sim::Backend::new()), Source::Simulated)
+        Machine::with(Inner::Sim(sim::Backend::new()), Source::Simulated)
     }
 
     /// The simulation, whatever the machine.  What `make demo` runs.
-    pub fn simulated() -> Probe {
-        Probe::with(Inner::Sim(sim::Backend::new()), Source::Simulated)
+    pub fn simulated() -> Machine {
+        Machine::with(Inner::Sim(sim::Backend::new()), Source::Simulated)
     }
 
-    fn with(inner: Inner, source: Source) -> Probe {
+    fn with(inner: Inner, source: Source) -> Machine {
         extern "C" {
             fn getuid() -> u32;
         }
         let uid = unsafe { getuid() };
-        Probe {
+        Machine {
             inner,
             start: std::time::Instant::now(),
             last: 0.0,
@@ -97,7 +97,7 @@ impl Probe {
         }
     }
 
-    /// Seconds since the probe was created.  Every timestamp in a `Snapshot`
+    /// Seconds since the machine was created.  Every timestamp in a `Snapshot`
     /// is on this clock, which is monotonic and starts at zero.
     pub fn now(&self) -> f64 {
         self.start.elapsed().as_secs_f64()
@@ -137,7 +137,7 @@ impl Probe {
     }
 }
 
-impl Default for Probe {
+impl Default for Machine {
     fn default() -> Self {
         Self::new()
     }
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn a_simulated_probe_ticks_and_says_it_is_simulated() {
-        let mut p = Probe::simulated();
+        let mut p = Machine::simulated();
         assert_eq!(p.source, Source::Simulated);
         let s = p.tick(&[]);
         assert!(s.simulated);
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn a_plan_for_a_missing_pid_refuses_rather_than_panicking() {
-        let mut p = Probe::simulated();
+        let mut p = Machine::simulated();
         let s = p.tick(&[]);
         assert!(p.plan(&s, 999_999, 2.0).refused);
     }
@@ -169,7 +169,7 @@ mod tests {
     /// simulation, and either way the invariants are the same.
     #[test]
     fn a_native_probe_reads_this_machine() {
-        let mut p = Probe::new();
+        let mut p = Machine::new();
         let a = p.tick(&[]);
         let b = p.tick(&[std::process::id() as i32]);
         assert!(b.t >= a.t);

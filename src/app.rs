@@ -2,17 +2,17 @@
 // Copyright (c) 2026 Paul Richeson
 //! The program's state, and everything that changes it.
 //!
-//! `App` holds the configuration, the probe, the last snapshot, the histories
+//! `App` holds the configuration, the machine, the last snapshot, the histories
 //! and the selection. `tick` samples; `key` handles input; `draw` (in `draw`)
 //! reads this and writes cells. Nothing here draws and nothing there decides.
 
 use std::collections::{HashMap, HashSet};
 
-use copal_tm_probe::halt::{Addressee, Plan, Rung};
-use copal_tm_probe::signals::{self, Signal, MENU};
-use copal_tm_probe::{Detail, Probe, Proc, Ring, Snapshot, Source};
-use copal_tm_tty::Key;
-use copal_tm_ui::Theme;
+use copal_tm::machine::halt::{Addressee, Plan, Rung};
+use copal_tm::machine::signals::{self, Signal, MENU};
+use copal_tm::machine::{Detail, Machine, Proc, Ring, Snapshot, Source};
+use copal_tm::tty::Key;
+use copal_tm::ui::Theme;
 
 use crate::config::{Config, Meter, Readout, Sort, View};
 use crate::transcript::Transcript;
@@ -110,7 +110,7 @@ pub struct LadderRun {
 pub struct App {
     pub cfg: Config,
     pub theme: Theme,
-    pub probe: Probe,
+    pub machine: Machine,
     pub snap: Snapshot,
     pub hist: History,
     pub log: Transcript,
@@ -150,13 +150,13 @@ pub struct App {
 impl App {
     pub fn new(cfg: Config, notes: Vec<String>) -> App {
         let theme = Theme::named(&cfg.theme, cfg.charset);
-        let probe = if cfg.simulate {
-            Probe::simulated()
+        let machine = if cfg.simulate {
+            Machine::simulated()
         } else {
-            Probe::new()
+            Machine::new()
         };
         let mut log = Transcript::new();
-        if probe.source == Source::Simulated {
+        if machine.source == Source::Simulated {
             log.note("SIMULATED: this machine has no /proc, so every reading below is made up");
         }
         for n in notes {
@@ -171,7 +171,7 @@ impl App {
             },
             cfg,
             theme,
-            probe,
+            machine,
             snap: Snapshot::default(),
             hist: History::default(),
             log,
@@ -282,7 +282,7 @@ impl App {
                 .filter_map(|i| self.snap.procs.get(*i))
                 .map(|p| p.pid),
         );
-        self.snap = self.probe.tick(&visible);
+        self.snap = self.machine.tick(&visible);
         self.hist.push(&self.snap);
         self.rebuild_rows();
         self.rank_roll();
@@ -301,7 +301,7 @@ impl App {
     /// Rule 4 of Section VII-B: a task manager that is in the top five of its
     /// own table has failed at its job.
     fn throttle(&mut self) {
-        let mine = self.proc_of(self.probe.me).map(|p| p.cpu).unwrap_or(0.0);
+        let mine = self.proc_of(self.machine.me).map(|p| p.cpu).unwrap_or(0.0);
         let low_battery =
             self.snap.power.on_battery && self.snap.power.charge.map(|c| c < 0.15).unwrap_or(false);
         if mine > 0.02 || low_battery {
@@ -343,7 +343,7 @@ impl App {
     }
 
     pub fn load_detail(&mut self, pid: i32) {
-        self.detail = self.probe.detail(pid);
+        self.detail = self.machine.detail(pid);
         self.detail_for = pid;
     }
 
@@ -553,7 +553,7 @@ impl App {
         let Some(pid) = self.selected_pid() else {
             return;
         };
-        let plan = self.probe.plan(&self.snap, pid, self.cfg.grace);
+        let plan = self.machine.plan(&self.snap, pid, self.cfg.grace);
         let name = plan.name.clone();
         if plan.refused {
             let why = plan
@@ -567,7 +567,7 @@ impl App {
         let addressee = plan
             .recommended()
             .cloned()
-            .unwrap_or(copal_tm_probe::halt::Addressee::Process(pid));
+            .unwrap_or(copal_tm::machine::halt::Addressee::Process(pid));
         self.run = Some(LadderRun {
             plan,
             addressee,
@@ -601,7 +601,7 @@ impl App {
 
     /// Advance a running ladder if its grace has expired.
     fn step_ladder(&mut self) {
-        let now = self.probe.now();
+        let now = self.machine.now();
         let Some(run) = &self.run else { return };
         if run.stepwise || now < run.next_at {
             return;
@@ -657,7 +657,7 @@ impl App {
             }
             let rung = run.plan.ladder[run.step].clone();
             run.step += 1;
-            run.next_at = self.probe.now() + rung.grace.max(0.2);
+            run.next_at = self.machine.now() + rung.grace.max(0.2);
             (rung, run.addressee.clone())
         };
         self.send(&addressee, &rung.sig, rung.also.as_ref());
@@ -694,7 +694,7 @@ impl App {
             (Overlay::Services, Key::Enter) => {
                 let sig = MENU[self.service_sel];
                 if let Some(pid) = self.selected_pid() {
-                    let plan = self.probe.plan(&self.snap, pid, self.cfg.grace);
+                    let plan = self.machine.plan(&self.snap, pid, self.cfg.grace);
                     if plan.refused {
                         let why = plan
                             .warnings
@@ -706,7 +706,7 @@ impl App {
                         let a = plan
                             .recommended()
                             .cloned()
-                            .unwrap_or(copal_tm_probe::halt::Addressee::Process(pid));
+                            .unwrap_or(copal_tm::machine::halt::Addressee::Process(pid));
                         self.send(&a, &sig, None);
                     }
                 }
@@ -884,7 +884,7 @@ impl App {
 
     /// The SYS panel's right-hand readout, per `sys.readout`.
     pub fn sys_readout(&self) -> String {
-        use copal_tm_probe::fmt;
+        use copal_tm::machine::fmt;
         match self.cfg.readout {
             Readout::Power => self
                 .snap
@@ -916,7 +916,7 @@ impl App {
 
     /// The value and readout of one SYS column.
     pub fn meter(&self, m: Meter) -> (f32, String, &'static str) {
-        use copal_tm_probe::fmt;
+        use copal_tm::machine::fmt;
         match m {
             Meter::Cpu => (self.snap.cpu.total, fmt::pct(self.snap.cpu.total), "CPU"),
             Meter::Battery => match self.snap.power.charge {

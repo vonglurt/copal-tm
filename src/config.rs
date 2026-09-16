@@ -8,7 +8,7 @@
 //! with its defaults commented, so the file never has to be written from
 //! documentation.
 
-use copal_tm_tty::Charset;
+use copal_tm::tty::Charset;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum View {
@@ -129,7 +129,7 @@ pub struct Config {
     pub confirm: bool,
     pub theme: String,
     pub mouse: bool,
-    /// Force the simulated probe, whatever the machine. `make demo`.
+    /// Force the simulation, whatever the machine. `make demo`.
     pub simulate: bool,
 }
 
@@ -400,7 +400,7 @@ usage: copal-tm [options]
   --browser.kernel BOOL  show kernel threads             (default false)
   --halt.grace SECONDS   between rungs of the halt ladder (default 2.0)
   --theme NAME           copal | mono
-  --simulate             run against the simulated probe, whatever the machine
+  --simulate             run against the simulation, whatever the machine
   --frame WxH            render one frame to stdout and exit (for screenshots)
   --dump-config          write the effective configuration and exit
   --help, --version

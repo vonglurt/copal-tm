@@ -14,7 +14,7 @@ mod transcript;
 use std::sync::mpsc::RecvTimeoutError;
 use std::time::Duration;
 
-use copal_tm_tty::{input_channel, Canvas, Key, Term};
+use copal_tm::tty::{input_channel, Canvas, Key, Term};
 
 use crate::app::App;
 use crate::config::{Config, USAGE};
@@ -64,14 +64,14 @@ fn main() {
         return;
     }
     if let Err(e) = run(cfg, notes) {
-        copal_tm_tty::restore();
+        copal_tm::tty::restore();
         eprintln!("copal-tm: {e}");
         std::process::exit(1);
     }
 }
 
 /// One frame, as the escape sequence that would draw it. Always against the
-/// simulated probe on a machine with no `/proc`, and always after enough ticks
+/// simulation on a machine with no `/proc`, and always after enough ticks
 /// to give the histories something to show.
 fn still(mut cfg: Config, notes: Vec<String>, w: i32, h: i32, open: Option<&str>) -> String {
     let truecolor = cfg.truecolor;
@@ -108,11 +108,11 @@ fn run(cfg: Config, notes: Vec<String>) -> std::io::Result<()> {
 
     app.tick();
     let mut out = String::with_capacity(1 << 16);
-    let mut next = app.probe.now();
+    let mut next = app.machine.now();
     let mut size_check = 0.0f64;
 
     while !app.quit {
-        let now = app.probe.now();
+        let now = app.machine.now();
         if now >= next {
             app.tick();
             next = now + app.period;
@@ -135,7 +135,7 @@ fn run(cfg: Config, notes: Vec<String>) -> std::io::Result<()> {
         canvas.flush(&mut out);
         term.write(&out);
 
-        let wait = (next - app.probe.now()).clamp(0.02, 0.25);
+        let wait = (next - app.machine.now()).clamp(0.02, 0.25);
         match keys.recv_timeout(Duration::from_secs_f64(wait)) {
             Ok(k) => {
                 handle(&mut app, &mut canvas, k);

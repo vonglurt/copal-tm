@@ -6,16 +6,16 @@
 //! V-B, draws the groups of Section VI into them, and puts any overlay on top.
 //! Nothing here decides anything: it reads `App` and writes cells.
 
-use copal_tm_probe::fmt;
-use copal_tm_probe::halt::Severity;
-use copal_tm_probe::signals::Disposition;
-use copal_tm_probe::types::Supervision;
-use copal_tm_tty::{Canvas, Rect, Rgb, BOLD, DIM};
-use copal_tm_ui::graph::{self, Axis, Series};
-use copal_tm_ui::ladder::{self, Hue, Ladder};
-use copal_tm_ui::panel::{self, Panel};
-use copal_tm_ui::table::{self, Col};
-use copal_tm_ui::tile::{self, Tile};
+use copal_tm::machine::fmt;
+use copal_tm::machine::halt::Severity;
+use copal_tm::machine::signals::Disposition;
+use copal_tm::machine::types::Supervision;
+use copal_tm::tty::{Canvas, Rect, Rgb, BOLD, DIM};
+use copal_tm::ui::graph::{self, Axis, Series};
+use copal_tm::ui::ladder::{self, Hue, Ladder};
+use copal_tm::ui::panel::{self, Panel};
+use copal_tm::ui::table::{self, Col};
+use copal_tm::ui::tile::{self, Tile};
 
 use crate::app::{App, Focus, Overlay};
 use crate::config::View;
@@ -415,8 +415,8 @@ fn roll_panel(app: &mut App, c: &mut Canvas, r: Rect) {
 
 /// The mark glyph that replaces the reference image's application icon, and
 /// carries more than decoration does: what kind of process, and what state.
-fn mark_of(app: &App, p: &copal_tm_probe::Proc, t: &copal_tm_ui::Theme) -> (char, Rgb) {
-    let glyph = if p.pid == app.probe.me {
+fn mark_of(app: &App, p: &copal_tm::machine::Proc, t: &copal_tm::ui::Theme) -> (char, Rgb) {
+    let glyph = if p.pid == app.machine.me {
         '\u{25c8}'
     } else if p.kernel_thread {
         '\u{25c7}'
@@ -426,7 +426,7 @@ fn mark_of(app: &App, p: &copal_tm_probe::Proc, t: &copal_tm_ui::Theme) -> (char
         '\u{25c6}'
     };
     let colour = match p.state {
-        _ if p.pid == app.probe.me => t.cyan,
+        _ if p.pid == app.machine.me => t.cyan,
         'R' => t.green,
         'D' => t.orange,
         'T' | 't' => t.yellow,
@@ -785,7 +785,7 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
             'D' => t.orange,
             'Z' => t.red,
             'T' | 't' => t.yellow,
-            _ if p.pid == app.probe.me => t.cyan,
+            _ if p.pid == app.machine.me => t.cyan,
             _ => t.text,
         };
 
@@ -1032,7 +1032,7 @@ fn inspector(app: &mut App, c: &mut Canvas, r: Rect) {
                     DIM,
                 );
                 y += 1;
-                for s in copal_tm_probe::signals::TABLE {
+                for s in copal_tm::machine::signals::TABLE {
                     if y >= rest.bottom() {
                         break;
                     }
@@ -1064,8 +1064,8 @@ fn inspector(app: &mut App, c: &mut Canvas, r: Rect) {
 }
 
 /// The Inspector's Network section: every socket the process holds, joined
-/// from its own descriptors. See `probe::types::Socket` for the relation.
-fn network_section(app: &App, c: &mut Canvas, r: Rect, d: &Option<copal_tm_probe::Detail>) {
+/// from its own descriptors. See `machine::types::Socket` for the relation.
+fn network_section(app: &App, c: &mut Canvas, r: Rect, d: &Option<copal_tm::machine::Detail>) {
     let t = app.theme.clone();
     let Some(d) = d else {
         c.text(r.x, r.y, r.w, "not read", t.dim, t.panel, DIM);
@@ -1166,7 +1166,7 @@ fn network_section(app: &App, c: &mut Canvas, r: Rect, d: &Option<copal_tm_probe
 /// anything is sent.
 fn tools_section(app: &App, c: &mut Canvas, r: Rect, pid: i32) {
     let t = app.theme.clone();
-    let plan = app.probe.plan(&app.snap, pid, app.cfg.grace);
+    let plan = app.machine.plan(&app.snap, pid, app.cfg.grace);
     let mut y = r.y;
     for w in &plan.warnings {
         if y >= r.bottom() {
@@ -1198,7 +1198,7 @@ fn tools_section(app: &App, c: &mut Canvas, r: Rect, pid: i32) {
             r.x + 2,
             y,
             r.w - 2,
-            &a.command(&copal_tm_probe::signals::SIGTERM),
+            &a.command(&copal_tm::machine::signals::SIGTERM),
             t.cyan,
             t.panel,
             BOLD,
@@ -1349,7 +1349,7 @@ fn halt(app: &mut App, c: &mut Canvas, r: Rect) {
                 body.x + 2,
                 y + 1,
                 body.w - 2,
-                &a.command(&copal_tm_probe::signals::SIGTERM),
+                &a.command(&copal_tm::machine::signals::SIGTERM),
                 t.cyan,
                 t.panel,
                 BOLD,
@@ -1395,7 +1395,7 @@ fn halt(app: &mut App, c: &mut Canvas, r: Rect) {
         .ladder
         .get(step.min(plan.ladder.len() - 1))
         .map(|r| r.sig)
-        .unwrap_or(copal_tm_probe::signals::SIGTERM);
+        .unwrap_or(copal_tm::machine::signals::SIGTERM);
     let cmd = addressee.command(&sig);
     c.text(body.x + 2, y, body.w - 2, &cmd, t.cyan, t.panel, BOLD);
     y += 2;
@@ -1536,7 +1536,7 @@ mod tests {
     fn render(w: i32, h: i32, f: impl FnOnce(&mut App)) -> Vec<String> {
         let cfg = Config {
             simulate: true,
-            charset: copal_tm_tty::Charset::Full,
+            charset: copal_tm::tty::Charset::Full,
             ..Config::default()
         };
         let mut app = App::new(cfg, Vec::new());
@@ -1720,7 +1720,7 @@ mod tests {
     fn the_ascii_fallback_draws_the_same_interface() {
         let cfg = Config {
             simulate: true,
-            charset: copal_tm_tty::Charset::Ascii,
+            charset: copal_tm::tty::Charset::Ascii,
             ..Config::default()
         };
         let mut app = App::new(cfg, Vec::new());

@@ -19,7 +19,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver};
 
-use crate::keys::{Key, KeyParser};
+use crate::tty::keys::{Key, KeyParser};
 
 /// Set once the terminal is in raw mode, so the restore runs exactly once
 /// however the program ends.
@@ -151,7 +151,7 @@ fn handshake() -> bool {
         }
     }
     let _ = stty(&["raw", "-echo"]);
-    crate::keys::size_reply(&reply).is_some()
+    crate::tty::keys::size_reply(&reply).is_some()
 }
 
 /// Start the reader thread.  Every key, size report and mouse click the

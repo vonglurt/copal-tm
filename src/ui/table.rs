@@ -7,9 +7,9 @@
 //! is named in cyan with an arrow; and a flexible column absorbs whatever
 //! width is left, so the same table renders at 44 columns and at 140.
 
-use copal_tm_tty::{Canvas, Rect, Rgb, BOLD, DIM};
+use crate::tty::{Canvas, Rect, Rgb, BOLD, DIM};
 
-use crate::theme::Theme;
+use crate::ui::theme::Theme;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Col {
@@ -212,7 +212,7 @@ pub fn guides(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use copal_tm_tty::Charset;
+    use crate::tty::Charset;
 
     const COLS: &[Col] = &[
         Col::num("PID", 7),

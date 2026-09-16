@@ -6,7 +6,7 @@
 //! only the cells that changed, coalescing runs so that a panel whose numbers
 //! tick once a second costs a few dozen bytes rather than a full screen.
 
-use crate::color::Rgb;
+use crate::tty::color::Rgb;
 use std::fmt::Write as _;
 
 pub const BOLD: u8 = 1;

@@ -14,7 +14,7 @@ packages remain under their own licences.
 Copal's "full monty" install level puts a desktop on an Alpine machine and
 leaves the user with `top`. This report specifies the program that should be
 there instead: `copal-tm`, a task manager for the terminal, built as a Rust
-Cargo workspace with no external crates, shipped as a crate, and installed by
+single Rust crate with no external crates, shipped as one crate, and installed by
 `copal-prep.sh` at stage 17 alongside the rest of the full install.
 
 The design is taken from one image — a macOS sensor panel — read not as a
@@ -56,7 +56,7 @@ what an OpenRC service is, and neither will tell you, before you press the
 key, that the process you are about to terminate has installed a handler for
 `SIGTERM`.
 
-### B. Why it is a Rust workspace with no dependencies
+### B. Why it is one Rust crate with no dependencies
 
 Three conventions hold across the sibling projects and this one adopts them
 without modification:
@@ -70,18 +70,25 @@ without modification:
    other. A fleet node never reaches the internet.
 3. **The Makefile is the front door.** Cargo is what the Makefile calls.
 
-### C. The four crates
+### C. The three modules
 
-| crate | what it owns | knows about |
+One crate, named after the program. The terminal layer, the readings and the
+widgets are modules inside it, not packages beside it: they are one program,
+and they version, build and publish as one thing.
+
+| module | what it owns | knows about |
 |---|---|---|
-| `copal-tm-tty` | colour, a damage-tracked cell canvas, the glyph vocabulary and its fallbacks, raw mode, key decoding | nothing above it |
-| `copal-tm-probe` | every reading: `/proc`, `/sys`, and a simulated source for machines that have neither | no drawing |
-| `copal-tm-ui` | the widgets of Section V: title strips, ladders, strip charts, tiles, tables, the Inspector | draws into a canvas; holds no state of its own |
-| `copal-tm` | the binary: configuration, layout, the event loop, the halt ladder, the Transcript | all three |
+| `tty` | colour, a damage-tracked cell canvas, the glyph vocabulary and its fallbacks, raw mode, key decoding | nothing above it |
+| `machine` | every reading: `/proc`, `/sys`, and a simulated source for machines that have neither | no drawing |
+| `ui` | the widgets of Section V: title strips, ladders, strip charts, tiles, tables, the Inspector | draws into a canvas; holds no state of its own |
+
+The binary — configuration, layout, the event loop, the halt ladder, the
+Transcript — is the same crate's `main.rs`, and it is the only thing that
+knows all three.
 
 The split is the one that makes the program testable without a terminal: the
-canvas can be flushed to a string and asserted on, and the probe can be fed a
-directory of fixture files instead of `/proc`.
+canvas can be flushed to a string and asserted on, and the readings can be fed
+a directory of fixture files instead of `/proc`.
 
 ---
 
@@ -718,7 +725,7 @@ shows memory instead").
 **The status bar**, one row on `panel`: view name and counts at the left, the
 key hints for the current context in the middle in `dim` with the keys
 themselves in `cyan`, and at the right the tick period (`1.0s`), a `⏸` when
-paused, and `SIMULATED` in `orange` when the probe is not reading a real
+paused, and `SIMULATED` in `orange` when the readings are not from a real
 `/proc`.
 
 ---
@@ -781,7 +788,7 @@ to show.
 
 ### D. When there is no `/proc`
 
-The probe has two back ends chosen at compile time. On Linux it reads the
+The `machine` module has two back ends chosen at compile time. On Linux it reads the
 paths above. On anything else — the Mac this is written at — a **simulated**
 source produces plausible, seeded, slowly-drifting values and a synthetic
 process tree, so that every widget can be developed and screenshotted without
@@ -944,33 +951,33 @@ never has to be written from documentation.
 | `make` / `make build` | `cargo build --release`, into `target/release/copal-tm` |
 | `make run` | build and run it in this terminal |
 | `make debug` | `cargo build` and run under the debug profile with `COPAL_TM_LOG=debug`, logging to `/tmp/copal-tm.log` so the log does not fight the alternate screen for the terminal |
-| `make test` | `cargo test --workspace` |
+| `make test` | `cargo test` |
 | `make check` | `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test` |
 | `make fmt` | `cargo fmt` |
-| `make demo` | run against the simulated probe regardless of platform |
+| `make demo` | run against the simulation regardless of platform |
 | `make shot` | render **one frame** to stdout and exit — `copal-tm --frame WxH`. This is how a build is looked at without a terminal session, how every breakpoint of Section V-C is checked, and what the golden-frame tests render. `FRAME=80x24 make shot` for the narrow case; `make plain` strips the escapes |
-| `make install` | `cargo install --path crates/copal-tm --root ~/.local` |
-| `make dist` | `cargo package -p …` for each crate, checked but not pushed |
-| `make publish` | the four `cargo publish` calls in dependency order — **and it refuses unless `make check` has passed in this tree** |
+| `make install` | `cargo install --path . --root ~/.local` |
+| `make dist` | `cargo package`, checked but not pushed |
+| `make publish` | the one `cargo publish` call — **and it refuses unless `make check` has passed in this tree** |
 | `make clean` | `cargo clean` |
 | `make help` | the list above |
 
 ### B. Both machines
 
-The program is for Alpine and is written on a Mac. The probe's Linux back end
+The program is for Alpine and is written on a Mac. The `machine` module's Linux back end
 is `#[cfg(target_os = "linux")]`; everything else — the canvas, the widgets,
 the layout, the event loop, the halt ladder's *reasoning* — is portable, and
-on macOS the simulated probe feeds it. `make demo` is therefore a complete
+on macOS the simulation feeds it. `make demo` is therefore a complete
 rehearsal of the interface on a machine that has no `/proc` at all, which is
 what makes the design of Sections V and VI checkable before any of it is
 carried to the target.
 
 ### C. Publishing
 
-Four crates, published in dependency order: `copal-tm-tty`, `copal-tm-probe`,
-`copal-tm-ui`, `copal-tm`. Each carries `description`, `license = "MIT"`,
-`repository`, `keywords` and `categories`. Nothing is published until a build
-has been seen and `make check` is clean.
+One crate: `copal-tm`. It carries `description`, `license = "MIT"`,
+`repository`, `keywords` and `categories`. There is no dependency order to get
+right, because there are no dependencies to order. Nothing is published until
+a build has been seen and `make check` is clean.
 
 ### D. Installing on Copal
 
@@ -985,9 +992,9 @@ beyond musl's, which is the whole reason for the no-dependency rule.
 
 | phase | delivers | passes when |
 |---|---|---|
-| **0** | `copal-tm-tty`: colour, canvas, glyphs, raw mode, keys | the canvas writes only damaged cells; a sequence split across two reads decodes; braille bits match Unicode. *(Done: 11 tests.)* |
-| **1** | `copal-tm-probe`: the Linux back end and the simulated one, behind one interface | a known `SigCgt` mask decodes; a hexadecimal socket address reads little-endian; the simulated tree contains every case the halt plan reasons about; a native probe reads this machine. *(Done: 28 tests.)* |
-| **2** | `copal-tm-ui` groups A–E, and the layout | every breakpoint of Section V-C renders at its width without overlap or panic; a golden frame shows every group. *(Done: 28 widget tests, and 7 sizes from 40×12 to 200×60 plus the ASCII fallback.)* |
+| **0** | the `tty` module: colour, canvas, glyphs, raw mode, keys | the canvas writes only damaged cells; a sequence split across two reads decodes; braille bits match Unicode. *(Done: 11 tests.)* |
+| **1** | the `machine` module: the Linux back end and the simulated one, behind one interface | a known `SigCgt` mask decodes; a hexadecimal socket address reads little-endian; the simulated tree contains every case the halt plan reasons about; a native reader reads this machine. *(Done: 28 tests.)* |
+| **2** | the `ui` module, groups A–E, and the layout | every breakpoint of Section V-C renders at its width without overlap or panic; a golden frame shows every group. *(Done: 28 widget tests, and 7 sizes from 40×12 to 200×60 plus the ASCII fallback.)* |
 | **3** | groups F and G: the Browser, the tree, the Inspector | a collapsed parent's rolled-up RSS equals the sum of its subtree; the signal table decodes a mask; the Network section lists a listening port. *(Done.)* |
 | **4** | group H: Services and the halt ladder | the addressee walk picks the process group for a `sh`-wrapped child; a zombie offers its parent; an OpenRC-supervised process offers `rc-service stop`; an ignored signal is struck out and `KILL` always remains; nothing is sent without confirmation. *(Done.)* |
 | **5** | packaging | `make check` clean on both machines; a build seen; then publish. *(Build seen at 95 tests; publish pending.)* |
