@@ -1,10 +1,12 @@
 [package]
 name = "copal-tm-probe"
+description = "The readings of Copal Task Manager: /proc and /sys sampling, signal dispositions, halt plans, and a simulated machine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+readme = "../../README.md"
 
 [dependencies]

@@ -2,11 +2,11 @@
 
 <p align="center">
   <b>An instrument panel and a process browser, in one terminal window.</b><br>
-  <sub>The task manager for <a href="https://github.com/vonglurt/copal-alpine-linux">Copal Linux</a>'s full install — four Rust crates, zero dependencies.</sub>
+  <sub>The task manager for <a href="https://github.com/vonglurt/copal">Copal Linux</a>'s full install — four Rust crates, zero dependencies.</sub>
 </p>
 
 <p align="center">
-  <img src="docs/media/copal-tm-demo.png" alt="copal-tm running: the SYS cluster, CPU history, the Roll, the memory band, the tile rail and the process tree" width="100%">
+  <img src="https://raw.githubusercontent.com/vonglurt/copal-tm/main/docs/media/copal-tm-demo.png" alt="copal-tm running: the SYS cluster, CPU history, the Roll, the memory band, the tile rail and the process tree" width="100%">
 </p>
 
 <p align="center"><sub><code>make demo</code> — every reading above is simulated, and it says so.</sub></p>
@@ -34,7 +34,7 @@ Every one of those facts is in `/proc`. This program reads them.
 A sensor dashboard, translated into character cells rather than approximated by
 them. The design is not decoration — each part earns its place, and every hex
 value, glyph and sampling period is written down in
-**[docs/design-lab-report.md](docs/design-lab-report.md)** before it was
+**[docs/design-lab-report.md](https://github.com/vonglurt/copal-tm/blob/main/docs/design-lab-report.md)** before it was
 written in code.
 
 - **Dot-matrix title strips.** Title letter-spaced in cyan, headline metric
@@ -200,7 +200,7 @@ would be worse than the gap.
 ## Honest about what it costs
 
 The sampling schedule is specified, not incidental —
-[Section VII](docs/design-lab-report.md) of the design report gives every source,
+[Section VII](https://github.com/vonglurt/copal-tm/blob/main/docs/design-lab-report.md) of the design report gives every source,
 its period and the reason for the period.
 
 - **Nothing forks on the tick.** Every reading is a file read. The one fork
@@ -311,5 +311,5 @@ plots and the tables are all legible without a single hue difference.
 
 ---
 
-MIT licensed — see [LICENSE](LICENSE). Copyright (c) 2026 Paul Richeson.
+MIT licensed — see [LICENSE](https://github.com/vonglurt/copal-tm/blob/main/LICENSE). Copyright (c) 2026 Paul Richeson.
 Copal Linux is an aggregation of Alpine Linux, not a derivative work of it.
