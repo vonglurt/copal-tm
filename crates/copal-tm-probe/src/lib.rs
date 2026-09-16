@@ -40,6 +40,12 @@ pub enum Source {
     Simulated,
 }
 
+// One of these exists per program: built once in Probe::new and held for the
+// run, so the 264 bytes between the variants are never multiplied by anything.
+// Boxing the native back end to even them out would put a pointer chase in
+// tick(), which samples every core and every visible process on every tick.
+// That is the wrong trade for an allocation made once at startup.
+#[allow(clippy::large_enum_variant)]
 enum Inner {
     #[cfg(target_os = "linux")]
     Native(native::Backend),

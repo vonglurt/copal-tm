@@ -774,7 +774,7 @@ fn power() -> Power {
         });
         if let (Some(e), Some(w)) = (now_uwh, p.watts) {
             if p.on_battery && w > 0.1 {
-                p.remaining_s = Some((e / 1e6) as f64 / w as f64 * 3600.0);
+                p.remaining_s = Some((e / 1e6) / w as f64 * 3600.0);
             }
         }
         break;
@@ -823,13 +823,15 @@ fn cpu_static(n: usize) -> (String, Option<String>, Vec<CoreClass>, Vec<String>)
     };
     let mut classes = Vec::with_capacity(n);
     let mut seen_core: Vec<String> = Vec::new();
-    for i in 0..n {
+    // cap was collected from (0..n), so it has exactly n entries and the index
+    // is still the cpu number that the sysfs paths below are named after.
+    for (i, capacity) in cap.iter().enumerate() {
         let class = if tiers.len() <= 1 {
             0
         } else {
             tiers
                 .iter()
-                .position(|t| (cap[i] as f64 - *t as f64).abs() / (*t as f64).max(1.0) < 0.05)
+                .position(|t| (*capacity as f64 - *t as f64).abs() / (*t as f64).max(1.0) < 0.05)
                 .unwrap_or(tiers.len() - 1) as u8
         };
         let sibs = fs::read_to_string(format!("/sys/devices/system/cpu/cpu{i}/topology/core_id"))
