@@ -256,7 +256,7 @@ copal-tm                    # ready, if ~/.cargo/bin is on your PATH
 ```
 
 Every release is a published version there. `cargo install copal-tm` takes the
-newest one; `cargo install copal-tm --version 0.1.2` pins a particular one, and
+newest one; `cargo install copal-tm --version 0.1.3` pins a particular one, and
 `cargo install copal-tm --force` upgrades an existing install in place.
 
 It needs Rust 1.70 or newer and nothing else: no `-sys` crate, no `pkg-config`,
@@ -277,7 +277,7 @@ Every tagged release carries a statically linked musl binary for x86_64 and
 aarch64 — one file, no shared libraries, nothing to install beside it:
 
 ```sh
-tar xzf copal-tm-0.1.2-x86_64-unknown-linux-musl.tar.gz
+tar xzf copal-tm-0.1.3-x86_64-unknown-linux-musl.tar.gz
 install -Dm755 copal-tm-*/copal-tm ~/.local/bin/copal-tm
 ```
 

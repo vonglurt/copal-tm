@@ -1,7 +1,7 @@
 # Push a tag, get a release: two static musl binaries, their checksums, and a
 # GitHub Release holding them.
 #
-#     make check && git tag -a v0.1.2 -m 'copal-tm 0.1.2' && git push origin v0.1.2
+#     make check && git tag -a vX.Y.Z -m 'copal-tm X.Y.Z' && git push origin vX.Y.Z
 #
 # Both builds are native -- x86_64 on an x86_64 runner, aarch64 on an arm
 # runner -- so nothing is cross-compiled and nothing needs QEMU.  musl is

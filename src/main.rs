@@ -110,39 +110,60 @@ fn run(cfg: Config, notes: Vec<String>) -> std::io::Result<()> {
     let mut out = String::with_capacity(1 << 16);
     let mut next = app.machine.now();
     let mut size_check = 0.0f64;
+    // Nothing on screen is drawn from the clock: every cell is a function of
+    // the last snapshot, the selection and the terminal size.  So a frame is
+    // worth recomputing only when one of those three has changed -- a tick, a
+    // key, or a resize.  Recomputing it on every pass of this loop instead
+    // cost ~35% of a core at 118x34, and the self-throttle could not touch
+    // that: the throttle slows the tick, and the tick was never the expense.
+    let mut dirty = true;
 
     while !app.quit {
         let now = app.machine.now();
         if now >= next {
             app.tick();
             next = now + app.period;
+            dirty = true;
         }
         // Follow the window. A terminal that answers `CSI 18 t` tells us on
         // the stream we are already reading; one that does not is asked the
         // slow way, and only every other second.
+        //
+        // The answer arrives as a key, and a key wakes this loop -- so asking
+        // on every pass asked again the instant the answer landed.  That
+        // feedback loop ran at ~4,200 wakeups a second and was half of what
+        // this program cost.  Four times a second is as quick as a resize
+        // needs to be noticed, and it is the same rate the wait below caps at.
         if term.reports_size {
-            term.ask_size();
+            if now - size_check > 0.25 {
+                size_check = now;
+                term.ask_size();
+            }
         } else if now - size_check > 2.0 {
             size_check = now;
             let (w, h) = Term::size_slow();
             if w != canvas.w || h != canvas.h {
                 canvas.resize(w, h);
+                dirty = true;
             }
         }
 
-        out.clear();
-        draw::frame(&mut app, &mut canvas);
-        canvas.flush(&mut out);
-        term.write(&out);
+        if dirty {
+            out.clear();
+            draw::frame(&mut app, &mut canvas);
+            canvas.flush(&mut out);
+            term.write(&out);
+            dirty = false;
+        }
 
         let wait = (next - app.machine.now()).clamp(0.02, 0.25);
         match keys.recv_timeout(Duration::from_secs_f64(wait)) {
             Ok(k) => {
-                handle(&mut app, &mut canvas, k);
+                dirty |= handle(&mut app, &mut canvas, k);
                 // Drain whatever else arrived in the same burst, so holding a
                 // key scrolls rather than queueing frames.
                 while let Ok(k) = keys.try_recv() {
-                    handle(&mut app, &mut canvas, k);
+                    dirty |= handle(&mut app, &mut canvas, k);
                 }
             }
             Err(RecvTimeoutError::Timeout) => {}
@@ -152,17 +173,33 @@ fn run(cfg: Config, notes: Vec<String>) -> std::io::Result<()> {
     Ok(())
 }
 
-fn handle(app: &mut App, canvas: &mut Canvas, k: Key) {
+/// Returns whether anything changed that the next frame would show.  The
+/// terminal answers `CSI 18 t` on every pass of the loop, so the common case
+/// here is a size report identical to the last one -- which is emphatically
+/// not a reason to redraw.
+fn handle(app: &mut App, canvas: &mut Canvas, k: Key) -> bool {
     match k {
         Key::Size(w, h) => {
             if w != canvas.w || h != canvas.h {
                 canvas.resize(w, h);
+                true
+            } else {
+                false
             }
         }
         // Wheel up and down, which is how a long process list is scrolled.
-        Key::Mouse(64, _, _) => app.move_sel(-3),
-        Key::Mouse(65, _, _) => app.move_sel(3),
-        Key::Mouse(..) => {}
-        other => app.key(other),
+        Key::Mouse(64, _, _) => {
+            app.move_sel(-3);
+            true
+        }
+        Key::Mouse(65, _, _) => {
+            app.move_sel(3);
+            true
+        }
+        Key::Mouse(..) => false,
+        other => {
+            app.key(other);
+            true
+        }
     }
 }
