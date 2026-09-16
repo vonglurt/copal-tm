@@ -16,7 +16,7 @@ BIN    = target/release/copal-tm
 PREFIX ?= $(HOME)/.local
 FRAME  ?= 132x40
 
-.PHONY: all build run debug demo shot plain test check fmt clippy install uninstall dist publish clean help
+.PHONY: all build run debug demo shot plain test check fmt clippy install uninstall dist dist-bin publish clean help
 
 all: build
 
@@ -31,6 +31,7 @@ help:
 	@echo 'make fmt        cargo fmt'
 	@echo 'make install    into $(PREFIX)/bin'
 	@echo 'make dist       package the crate, without pushing anything'
+	@echo 'make dist-bin   a release tarball for this machine, into dist/'
 	@echo 'make publish    the one cargo publish call'
 	@echo 'make clean      cargo clean'
 
@@ -81,6 +82,11 @@ uninstall:
 
 dist:
 	$(CARGO) package --allow-dirty
+
+# What the release workflow builds for x86_64 and aarch64, built here for
+# whatever this machine is.
+dist-bin:
+	@sh tools/release-build.sh
 
 # One crate, so one publish, and it is gated on a clean check in this tree,
 # now.  Nothing goes to crates.io that has not been built and looked at first.

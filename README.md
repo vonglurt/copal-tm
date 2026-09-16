@@ -2,7 +2,13 @@
 
 <p align="center">
   <b>An instrument panel and a process browser, in one terminal window.</b><br>
-  <sub>The task manager for <a href="https://github.com/vonglurt/copal">Copal Linux</a>'s full install — four Rust crates, zero dependencies.</sub>
+  <sub>The task manager for <a href="https://github.com/vonglurt/copal">Copal Linux</a>'s full install — one Rust crate, zero dependencies.</sub>
+</p>
+
+<p align="center">
+  <a href="https://crates.io/crates/copal-tm"><img src="https://img.shields.io/crates/v/copal-tm.svg?style=flat-square" alt="copal-tm on crates.io"></a>
+  <a href="https://github.com/vonglurt/copal-tm/blob/main/LICENSE"><img src="https://img.shields.io/crates/l/copal-tm.svg?style=flat-square" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/dependencies-0-informational?style=flat-square" alt="zero dependencies">
 </p>
 
 <p align="center">
@@ -238,6 +244,64 @@ One crate named after the program, and three modules inside it:
 The binary — configuration, layout, the event loop, the Transcript — is the
 same crate's `main.rs`. There is one name on crates.io, one version, and
 nothing to publish in dependency order.
+
+## Install
+
+It is published on [crates.io](https://crates.io/crates/copal-tm), and it has no
+dependencies, so `cargo install` fetches exactly one crate and builds it:
+
+```sh
+cargo install copal-tm      # builds and installs into ~/.cargo/bin
+copal-tm                    # ready, if ~/.cargo/bin is on your PATH
+```
+
+Every release is a published version there. `cargo install copal-tm` takes the
+newest one; `cargo install copal-tm --version 0.1.2` pins a particular one, and
+`cargo install copal-tm --force` upgrades an existing install in place.
+
+It needs Rust 1.70 or newer and nothing else: no `-sys` crate, no `pkg-config`,
+no C library to find — the only thing cargo downloads is this. To put the binary
+somewhere other than `~/.cargo/bin`, give cargo a root:
+
+```sh
+cargo install --root /usr/local copal-tm     # /usr/local/bin/copal-tm
+cargo uninstall --root /usr/local copal-tm   # and back out again
+```
+
+`cargo uninstall copal-tm`, with no `--root`, removes the one in
+`~/.cargo/bin`: the root has to match the one it was installed under.
+
+### Without a Rust toolchain
+
+Every tagged release carries a statically linked musl binary for x86_64 and
+aarch64 — one file, no shared libraries, nothing to install beside it:
+
+```sh
+tar xzf copal-tm-0.1.2-x86_64-unknown-linux-musl.tar.gz
+install -Dm755 copal-tm-*/copal-tm ~/.local/bin/copal-tm
+```
+
+They are on the [releases page](https://github.com/vonglurt/copal-tm/releases),
+each with a `.sha256` beside it. `make dist-bin` builds the same tarball for
+whatever machine you are sitting at.
+
+### On Alpine
+
+`packaging/alpine/APKBUILD` is an aport for this program. With `alpine-sdk`
+installed and a signing key made (`abuild-keygen -a -i`), `abuild -r` in that
+directory builds an `.apk` from the tagged source — the ordinary Alpine
+packaging path, and the one to send upstream to aports.
+
+### From a checkout
+
+The Makefile is the front door, and it installs into
+`~/.local/bin` — where `copal-build` puts everything else on a Copal machine:
+
+```sh
+make install                    # ~/.local/bin/copal-tm
+PREFIX=/usr/local make install  # anywhere else
+make uninstall
+```
 
 ## Build
 

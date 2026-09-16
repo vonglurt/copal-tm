@@ -1,0 +1,101 @@
+# Push a tag, get a release: two static musl binaries, their checksums, and a
+# GitHub Release holding them.
+#
+#     make check && git tag -a v0.1.2 -m 'copal-tm 0.1.2' && git push origin v0.1.2
+#
+# Both builds are native -- x86_64 on an x86_64 runner, aarch64 on an arm
+# runner -- so nothing is cross-compiled and nothing needs QEMU.  musl is
+# statically linked, which is the point: one file, and it runs on an Alpine
+# box that has nothing else on it.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add ${{ matrix.target }}
+
+      - name: musl linker
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      # A tag that does not pass its own tests does not get a release.
+      - run: cargo test --locked
+
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package
+        run: |
+          set -eu
+          ver="${GITHUB_REF_NAME#v}"
+          name="copal-tm-${ver}-${{ matrix.target }}"
+          mkdir -p "dist/$name"
+          cp "target/${{ matrix.target }}/release/copal-tm" "dist/$name/"
+          strip "dist/$name/copal-tm" || true
+          cp README.md LICENSE "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*.tar.gz*
+          if-no-files-found: error
+
+  release:
+    name: publish the release
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # gh is already on the runner, so this needs nothing from outside
+      # GitHub -- in keeping with a program that depends on nothing.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          ver="${GITHUB_REF_NAME#v}"
+          notes="$(printf '%s\n' \
+            "\`cargo install copal-tm\` is the usual way in; these are for a machine without a Rust toolchain." \
+            "" \
+            "| file | for |" \
+            "|---|---|" \
+            "| \`copal-tm-${ver}-x86_64-unknown-linux-musl.tar.gz\` | 64-bit Intel/AMD Linux |" \
+            "| \`copal-tm-${ver}-aarch64-unknown-linux-musl.tar.gz\` | 64-bit ARM Linux |" \
+            "" \
+            "Statically linked against musl: one file, no shared libraries, no dependencies." \
+            "Each tarball has a \`.sha256\` beside it." \
+            "" \
+            "On crates.io: https://crates.io/crates/copal-tm/${ver}")"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "copal-tm ${ver}" \
+            --notes "$notes" \
+            dist/*.tar.gz dist/*.sha256

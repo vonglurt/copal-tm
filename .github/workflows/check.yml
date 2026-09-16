@@ -1,0 +1,46 @@
+# The gate. Everything `make check` runs locally, run again on the server, so a
+# push that would not build cannot quietly become the state of main.
+#
+# Make this a *required* status check in Settings -> Branches -> branch
+# protection for `main`; the workflow only reports, it is the branch rule that
+# refuses the merge.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: fmt, clippy, tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup default stable
+
+      # The same three, in the same order, as the `check` target in the Makefile.
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --locked
+
+  msrv:
+    name: builds on the stated minimum (1.70)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-version in Cargo.toml and the README both promise 1.70. This is
+      # what stops that promise from going stale without anyone noticing.
+      - name: Install 1.70
+        run: rustup toolchain install 1.70 --profile minimal
+
+      - run: cargo +1.70 build --locked

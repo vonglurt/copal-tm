@@ -1,0 +1,40 @@
+# Contributor: Paul Richeson <vonglurt@gmail.com>
+# Maintainer: Paul Richeson <vonglurt@gmail.com>
+pkgname=copal-tm
+pkgver=0.1.2
+pkgrel=0
+pkgdesc="An instrument panel and a process browser for the terminal"
+url="https://github.com/vonglurt/copal-tm"
+arch="all"
+license="MIT"
+makedepends="cargo"
+subpackages="$pkgname-doc"
+source="$pkgname-$pkgver.tar.gz::https://github.com/vonglurt/copal-tm/archive/refs/tags/v$pkgver.tar.gz"
+
+# There are no dependencies to fetch -- the crate depends on nothing but std --
+# so this resolves the (empty) graph and then never touches the network again.
+prepare() {
+	default_prepare
+	cargo fetch --target="$CTARGET" --locked
+}
+
+build() {
+	cargo build --release --frozen
+}
+
+# The tests read /proc on Linux and fall back to the simulation where there is
+# none, so they pass in a builder either way.
+check() {
+	cargo test --release --frozen
+}
+
+package() {
+	install -Dm755 target/release/copal-tm "$pkgdir"/usr/bin/copal-tm
+	install -Dm644 README.md "$pkgdir"/usr/share/doc/$pkgname/README.md
+	install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+	install -Dm644 docs/design-lab-report.md \
+		"$pkgdir"/usr/share/doc/$pkgname/design-lab-report.md
+}
+
+sha512sums="
+"
