@@ -10,8 +10,10 @@
 //! `Snapshot::simulated` is not something the interface is allowed to forget.
 //!
 //! Nothing here draws, and the one function that changes the state of the
-//! machine - `signals::send` - is called only by the binary, only after a
-//! confirmation, and only with a plan from `halt` in hand.
+//! machine - `signals::send` - is reached only through `Machine::signal`,
+//! called only by the binary, only after a confirmation, and only with a plan
+//! from `halt` in hand.  The simulation never reaches it: its pids are made
+//! up, and a made-up pid can be a real process on the machine running the demo.
 
 pub mod fmt;
 pub mod halt;
@@ -131,6 +133,26 @@ impl Machine {
         }
     }
 
+    /// Send a signal to a pid, or to a process group when `target` is
+    /// negative.  Natively this is `signals::send`; in the simulation it
+    /// reaches the simulated table and nothing else.
+    pub fn signal(&mut self, target: i32, sig: i32) -> Result<(), std::io::Error> {
+        match &mut self.inner {
+            #[cfg(target_os = "linux")]
+            Inner::Native(_) => signals::send(target, sig),
+            Inner::Sim(b) => b.signal(target, sig),
+        }
+    }
+
+    /// Is this process still there?  Asked of whichever table it came from.
+    pub fn alive(&self, pid: i32) -> bool {
+        match &self.inner {
+            #[cfg(target_os = "linux")]
+            Inner::Native(_) => signals::alive(pid),
+            Inner::Sim(b) => b.alive(pid),
+        }
+    }
+
     /// Build a halt plan for a process.  Decides; does not act.
     pub fn plan(&self, snap: &Snapshot, pid: i32, grace: f64) -> Plan {
         halt::plan(&snap.procs, pid, grace, self.me, self.uid, self.root)
@@ -163,6 +185,71 @@ mod tests {
         let mut p = Machine::simulated();
         let s = p.tick(&[]);
         assert!(p.plan(&s, 999_999, 2.0).refused);
+    }
+
+    /// The demo's pids are made up, and a made-up pid can belong to a real
+    /// process here.  A signal sent in the simulation must never reach it.
+    #[test]
+    fn a_simulated_signal_never_reaches_a_real_process() {
+        let mut child = std::process::Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .expect("sleep");
+        let pid = child.id() as i32;
+        let mut m = Machine::simulated();
+        m.tick(&[]);
+        let _ = m.signal(pid, signals::SIGKILL.num);
+        let _ = m.signal(-pid, signals::SIGKILL.num);
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        let still_running = child.try_wait().expect("wait").is_none();
+        let _ = child.kill();
+        let _ = child.wait();
+        assert!(still_running, "the simulation signalled a real process");
+    }
+
+    #[test]
+    fn the_simulation_obeys_its_own_signal_masks() {
+        let mut m = Machine::simulated();
+        let s = m.tick(&[]);
+        let pid = |n: &str| s.procs.iter().find(|p| p.name == n).unwrap().pid;
+        let (stubborn, dd, vi) = (pid("stubborn"), pid("dd"), pid("vi"));
+
+        // `stubborn` ignores TERM, and KILL cannot be ignored.
+        m.signal(stubborn, signals::SIGTERM.num).unwrap();
+        assert!(m.alive(stubborn));
+        m.signal(stubborn, signals::SIGKILL.num).unwrap();
+        assert!(!m.alive(stubborn));
+        assert!(!m.tick(&[]).procs.iter().any(|p| p.pid == stubborn));
+
+        // Uninterruptible sleep outlasts even KILL.
+        m.signal(dd, signals::SIGKILL.num).unwrap();
+        assert!(m.alive(dd));
+
+        // CONT wakes a stopped process; STOP puts it back.
+        m.signal(vi, signals::SIGCONT.num).unwrap();
+        assert_eq!(
+            m.tick(&[])
+                .procs
+                .iter()
+                .find(|p| p.pid == vi)
+                .unwrap()
+                .state,
+            'S'
+        );
+        m.signal(vi, signals::SIGSTOP.num).unwrap();
+        assert_eq!(
+            m.tick(&[])
+                .procs
+                .iter()
+                .find(|p| p.pid == vi)
+                .unwrap()
+                .state,
+            'T'
+        );
+
+        // Gone is gone, and init is refused before anything is looked up.
+        assert!(m.signal(stubborn, signals::SIGTERM.num).is_err());
+        assert!(m.signal(1, signals::SIGTERM.num).is_err());
     }
 
     /// On Linux this exercises the real reader; everywhere else it is the

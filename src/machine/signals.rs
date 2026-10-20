@@ -180,20 +180,27 @@ pub fn send(pid: i32, sig: i32) -> Result<(), std::io::Error> {
     extern "C" {
         fn kill(pid: i32, sig: i32) -> i32;
     }
-    // Refuse the two that can never be right, here as well as in the plan,
-    // because this function is the only door and the check belongs on it.
-    if pid == 1 || pid == 0 {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "refusing to signal pid 1 or the whole session",
-        ));
-    }
+    guard(pid)?;
     let rc = unsafe { kill(pid, sig) };
     if rc == 0 {
         Ok(())
     } else {
         Err(std::io::Error::last_os_error())
     }
+}
+
+/// Refuse the two that can never be right, here as well as in the plan,
+/// because `send` is the only door and the check belongs on it.  The
+/// simulation asks the same question, so the demo refuses what the real
+/// thing would.
+pub fn guard(pid: i32) -> Result<(), std::io::Error> {
+    if pid == 1 || pid == 0 {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "refusing to signal pid 1 or the whole session",
+        ));
+    }
+    Ok(())
 }
 
 /// Is this process still there?  `kill(pid, 0)` checks without sending.

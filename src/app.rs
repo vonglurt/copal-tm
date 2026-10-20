@@ -9,7 +9,7 @@
 use std::collections::{HashMap, HashSet};
 
 use copal_tm::machine::halt::{Addressee, Plan, Rung};
-use copal_tm::machine::signals::{self, Signal, MENU};
+use copal_tm::machine::signals::{Signal, MENU};
 use copal_tm::machine::{Detail, Machine, Proc, Ring, Snapshot, Source};
 use copal_tm::tty::Key;
 use copal_tm::ui::Theme;
@@ -586,11 +586,11 @@ impl App {
                 .refusal(format!("{cmd} - run this yourself; it is not a signal"));
             return;
         };
-        match signals::send(target, sig.num) {
+        match self.machine.signal(target, sig.num) {
             Ok(()) => {
                 self.log.signal(cmd);
                 if let Some(a) = also {
-                    if signals::send(target, a.num).is_ok() {
+                    if self.machine.signal(target, a.num).is_ok() {
                         self.log.signal(addressee.command(a));
                     }
                 }
@@ -607,7 +607,7 @@ impl App {
             return;
         }
         let pid = run.plan.pid;
-        if !signals::alive(pid) {
+        if !self.machine.alive(pid) {
             let rung = run.step.saturating_sub(1);
             let name = run.plan.name.clone();
             let sig = run.plan.ladder.get(rung).map(|r| r.sig.name).unwrap_or("?");
@@ -645,7 +645,7 @@ impl App {
                 let name = run.plan.name.clone();
                 self.run = None;
                 self.overlay = Overlay::None;
-                if signals::alive(pid) {
+                if self.machine.alive(pid) {
                     self.log.refusal(format!(
                         "{name} ({pid}) survived every rung including KILL - it is in \
                          uninterruptible sleep, or it is not ours"
@@ -1152,6 +1152,22 @@ mod tests {
             !a.log.entries().iter().any(|e| e.kind == Kind::Signal),
             "a plan is shown, not run"
         );
+    }
+
+    #[test]
+    fn a_confirmed_halt_in_the_demo_ends_the_simulated_process_only() {
+        let mut a = app();
+        let pid = a.snap.procs.iter().find(|p| p.name == "node").unwrap().pid;
+        a.sel = a.rows.iter().position(|r| r.pid == pid).unwrap();
+        a.open_halt();
+        a.key(Key::Enter);
+        assert!(
+            a.log.entries().iter().any(|e| e.kind == Kind::Signal),
+            "the first rung was sent, to the simulation"
+        );
+        assert!(!a.machine.alive(pid), "the simulated node is gone");
+        a.tick();
+        assert!(!a.snap.procs.iter().any(|p| p.pid == pid));
     }
 
     #[test]

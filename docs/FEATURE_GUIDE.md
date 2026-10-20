@@ -14,9 +14,9 @@ build.
 >
 > Most pictures are single frames from `copal-tm --simulate --frame WxH [--open ...]`, the same
 > path `make shot` and the golden-frame tests use. The ones marked *live* are the real event loop
-> in a pseudo-terminal, driven by keystrokes. Nothing in this guide confirms a halt plan or a
-> Services item: in this release a confirmed signal goes to `kill(2)` even under `--simulate`,
-> at the simulation's pids, so the tour stops at the confirmation on purpose.
+> in a pseudo-terminal, driven by keystrokes. The tour stops at each confirmation. Under
+> `--simulate` a confirmed signal goes to the simulated table, never to `kill(2)`, so confirming
+> one in the demo ends only a made-up process.
 
 The design behind every part is written down in [the design lab report](design-lab-report.md);
 the keys, the configuration and the install are in the [README](../README.md).

@@ -18,7 +18,7 @@
 //! It is never silent about being a simulation: `Snapshot::simulated` is set,
 //! the status bar shows `SIMULATED`, and the first Transcript line says so.
 
-use crate::machine::signals::SigMask;
+use crate::machine::signals::{self, Disposition, SigMask};
 use crate::machine::types::*;
 
 /// A small linear congruential generator.  Numerical Recipes' constants; it
@@ -258,6 +258,90 @@ impl Backend {
         }
         s.procs = self.table.clone();
         s
+    }
+}
+
+impl Backend {
+    /// Deliver a signal to the simulated table, as the kernel would: to one
+    /// pid, or to every member of process group `-target`.  It never calls
+    /// `kill`, because these pids are made up and may be real ones here.
+    pub fn signal(&mut self, target: i32, sig: i32) -> Result<(), std::io::Error> {
+        signals::guard(target)?;
+        let hit: Vec<usize> = (0..self.table.len())
+            .filter(|&i| {
+                let p = &self.table[i];
+                if target < 0 {
+                    p.pgid == -target
+                } else {
+                    p.pid == target
+                }
+            })
+            .collect();
+        if hit.is_empty() {
+            return Err(std::io::Error::from_raw_os_error(3)); // ESRCH
+        }
+        let me = my_uid();
+        let ours: Vec<usize> = hit
+            .into_iter()
+            .filter(|&i| me == 0 || self.table[i].uid == me)
+            .collect();
+        if ours.is_empty() {
+            return Err(std::io::Error::from_raw_os_error(1)); // EPERM
+        }
+
+        let mut gone = Vec::new();
+        for i in ours {
+            let p = &mut self.table[i];
+            // A zombie has already exited, and a kernel thread takes no
+            // signals from user space.
+            if p.state == 'Z' || p.kernel_thread {
+                continue;
+            }
+            let fatal = match sig {
+                n if n == signals::SIGSTOP.num => {
+                    p.state = 'T';
+                    false
+                }
+                n if n == signals::SIGCONT.num => {
+                    if p.state == 'T' {
+                        p.state = 'S';
+                    }
+                    false
+                }
+                n if n == signals::SIGKILL.num => true,
+                n => match p.sig.unwrap_or_default().disposition(n) {
+                    Disposition::Default | Disposition::Uncatchable => true,
+                    // A handler for a stopping signal cleans up and exits; one
+                    // for HUP or the USR pair reloads and stays.
+                    Disposition::Trapped => [
+                        signals::SIGTERM.num,
+                        signals::SIGINT.num,
+                        signals::SIGQUIT.num,
+                    ]
+                    .contains(&n),
+                    Disposition::Ignored | Disposition::Blocked => false,
+                },
+            };
+            // Uninterruptible sleep holds even KILL until the I/O returns.
+            if fatal && p.state != 'D' {
+                gone.push(p.pid);
+            }
+        }
+        for pid in gone {
+            if let Some(i) = self.table.iter().position(|p| p.pid == pid) {
+                self.table.remove(i);
+                self.procs_cpu.remove(i);
+            }
+            for c in self.table.iter_mut().filter(|c| c.ppid == pid) {
+                c.ppid = 1;
+            }
+        }
+        Ok(())
+    }
+
+    /// `kill(pid, 0)` against the simulated table.
+    pub fn alive(&self, pid: i32) -> bool {
+        self.table.iter().any(|p| p.pid == pid)
     }
 }
 
