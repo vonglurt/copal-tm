@@ -16,6 +16,7 @@
 </p>
 
 <p align="center"><sub><code>make demo</code> — every reading above is simulated, and it says so.</sub></p>
+<p align="center"><sub>A tour in pictures, part by part: <a href="https://github.com/vonglurt/copal-tm/blob/main/docs/FEATURE_GUIDE.md">docs/FEATURE_GUIDE.md</a>.</sub></p>
 
 ---
 
