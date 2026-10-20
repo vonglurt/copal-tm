@@ -93,6 +93,12 @@ The row colour is the state: `D` uninterruptible in orange, `Z` zombie in red,
 `T` stopped in yellow. The program's own row is cyan. Arguments are drawn dim
 behind the program name, so a long command line stays scannable.
 
+It is also how you find out what an AI agent has been doing on the machine.
+Everything an agent runs is a child of the shell it was given, so the tree
+answers *what has it launched, and is any of it still running* at a glance:
+open the agent's row, follow it down, and halt one runaway child without
+touching the rest.
+
 ## The part nobody else shows you
 
 Every Linux process publishes three hexadecimal words in `/proc/[pid]/status`:
@@ -257,7 +263,7 @@ copal-tm                    # ready, if ~/.cargo/bin is on your PATH
 ```
 
 Every release is a published version there. `cargo install copal-tm` takes the
-newest one; `cargo install copal-tm --version 0.1.3` pins a particular one, and
+newest one; `cargo install copal-tm --version 0.1.4` pins a particular one, and
 `cargo install copal-tm --force` upgrades an existing install in place.
 
 It needs Rust 1.70 or newer and nothing else: no `-sys` crate, no `pkg-config`,
@@ -278,7 +284,7 @@ Every tagged release carries a statically linked musl binary for x86_64 and
 aarch64 — one file, no shared libraries, nothing to install beside it:
 
 ```sh
-tar xzf copal-tm-0.1.3-x86_64-unknown-linux-musl.tar.gz
+tar xzf copal-tm-0.1.4-x86_64-unknown-linux-musl.tar.gz
 install -Dm755 copal-tm-*/copal-tm ~/.local/bin/copal-tm
 ```
 
@@ -378,6 +384,20 @@ theme          = copal        # copal | mono
 `charset = blocks` for a Linux console whose font has no braille; `theme = mono`
 where colour is not to be trusted. Shape carries everything: the ladders, the
 plots and the tables are all legible without a single hue difference.
+
+## Credit
+
+The push to write this came from an advertisement. One afternoon YouTube played
+me a [Dave's Garage](https://www.youtube.com/@DavesGarage) spot in which Dave
+Plummer, who wrote the original Windows Task Manager, described TMOG, his new
+task manager, and the case for a better one. The attribution for that starting
+point is his.
+
+What copal-tm does with it is mine. I wrote down what I actually use a task
+manager for and built the display around that workflow: the process tree that
+you step through like a debugger, following a program down to the children it
+started, so that I can see what an AI agent has launched on Copal and stop just
+the part that has run away. copal-tm shares no code with TMOG.
 
 ---
 
