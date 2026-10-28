@@ -280,6 +280,12 @@ cargo install copal-tm      # builds and installs into ~/.cargo/bin
 copal-tm                    # ready, if ~/.cargo/bin is on your PATH
 ```
 
+On a Mac, `make install` from a checkout also puts **Copal TM.app** in
+`~/Applications`: it opens copal-tm in a Terminal window from Finder,
+Launchpad, Spotlight or the Dock (`make install APP=0` skips it). How the
+bundle, its icon and its ad-hoc signature are made, and what that signature
+does and does not allow, is `docs/mac-app-lab-report.md`.
+
 Every release is a published version there. `cargo install copal-tm` takes the
 newest one; `cargo install copal-tm --version 0.1.4` pins a particular one, and
 `cargo install copal-tm --force` upgrades an existing install in place.

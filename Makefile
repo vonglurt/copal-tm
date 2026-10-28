@@ -14,6 +14,8 @@
 CARGO ?= cargo
 BIN    = target/release/copal-tm
 PREFIX ?= $(HOME)/.local
+# On a Mac, make install also puts "Copal TM.app" in ~/Applications; APP=0 not.
+APP    ?= 1
 FRAME  ?= 132x40
 
 .PHONY: all build run debug demo shot plain test check fmt clippy install uninstall dist dist-bin publish clean help
@@ -29,7 +31,7 @@ help:
 	@echo 'make test       cargo test'
 	@echo 'make check      fmt --check, clippy -D warnings, and the tests'
 	@echo 'make fmt        cargo fmt'
-	@echo 'make install    into $(PREFIX)/bin'
+	@echo 'make install    into $(PREFIX)/bin; on a Mac also ~/Applications/Copal TM.app (APP=0 not)'
 	@echo 'make dist       package the crate, without pushing anything'
 	@echo 'make dist-bin   a release tarball for this machine, into dist/'
 	@echo 'make publish    the one cargo publish call'
@@ -76,9 +78,11 @@ check:
 
 install: build
 	$(CARGO) install --path . --root $(PREFIX) --force
+	@if [ "$$(uname -s)" = Darwin ] && [ "$(APP)" != 0 ]; then sh tools/mac-app.sh; fi
 
 uninstall:
 	$(CARGO) uninstall --root $(PREFIX) copal-tm
+	@if [ "$$(uname -s)" = Darwin ]; then sh tools/mac-app.sh --uninstall; fi
 
 dist:
 	$(CARGO) package --allow-dirty
