@@ -23,6 +23,8 @@ pub mod types;
 
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "linux")]
+mod nvidia;
 mod sim;
 
 #[cfg(target_os = "linux")]

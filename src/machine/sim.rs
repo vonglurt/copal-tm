@@ -219,6 +219,15 @@ impl Backend {
         s.disk.smart = Some("Healthy".into());
 
         s.gpu = Some(self.gpu.tick(&mut self.r));
+        let g = s.gpu.unwrap_or(0.0);
+        s.gpu_card = Some(GpuCard {
+            name: "Simulated GPU".into(),
+            cards: 1,
+            used_mb: Some(2400.0),
+            total_mb: Some(11264.0),
+            watts: Some(25.0 + g * 225.0),
+            celsius: Some(35.0 + g * 45.0),
+        });
 
         let t = self.temp.tick(&mut self.r) * 110.0;
         s.thermal.scale_max = 110.0;
@@ -257,6 +266,17 @@ impl Backend {
             p.rss_kb = (p.rss_kb as f32 * (1.0 + (r.unit() - 0.5) * 0.004)) as u64;
         }
         s.procs = self.table.clone();
+        // The queue runner is the simulation's CUDA job, started over SSH,
+        // so the GPU column, `:gpu`, `:ssh` and the Inspector have something
+        // to show in the pictures.
+        for p in s.procs.iter_mut().filter(|p| p.name == "ytq") {
+            p.gpu = Some(GpuUse {
+                compute: true,
+                busy: s.gpu.map(|g| g * 0.9),
+                mem_mb: Some(2100.0),
+            });
+            p.remote = Some("192.168.8.143".into());
+        }
         s
     }
 }
@@ -520,6 +540,8 @@ fn synthetic_tree() -> Vec<Proc> {
             kernel_thread: kern,
             supervision: sup,
             sig: Some(sig),
+            gpu: None,
+            remote: None,
         });
     };
 

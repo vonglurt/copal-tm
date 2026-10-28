@@ -24,6 +24,9 @@ pub struct Snapshot {
     pub thermal: Thermal,
     /// 0..1, when the machine has a counter that answers.
     pub gpu: Option<f32>,
+    /// An NVIDIA card's memory, power and heat (`nvidia.rs`); `None` for a
+    /// card read through `/sys`, which says only how busy it is.
+    pub gpu_card: Option<GpuCard>,
     pub psi: Psi,
     pub load: [f32; 3],
     pub uptime: f64,
@@ -233,6 +236,35 @@ pub struct Proc {
     /// Signal dispositions.  Filled for visible rows only - Section VII-A,
     /// row 8 - so `None` means "not looked at", never "nothing to report".
     pub sig: Option<SigMask>,
+    /// What it holds on an NVIDIA card, if anything.
+    pub gpu: Option<GpuUse>,
+    /// The address it was started from, when that was over SSH: the client
+    /// in its `SSH_CONNECTION`, which a job keeps after its session ends
+    /// (`nohup`, `tmux`). A fleet job, in this program's terms. Read once
+    /// per process, and only where `environ` is readable (the user's own
+    /// processes, or all of them as root).
+    pub remote: Option<String>,
+}
+
+/// An NVIDIA card, or the sum of several.
+#[derive(Clone, Debug, Default)]
+pub struct GpuCard {
+    pub name: String,
+    pub cards: usize,
+    pub used_mb: Option<f32>,
+    pub total_mb: Option<f32>,
+    pub watts: Option<f32>,
+    pub celsius: Option<f32>,
+}
+
+/// One process's use of the card.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct GpuUse {
+    /// A compute (CUDA) context, rather than graphics only.
+    pub compute: bool,
+    /// Its share of the card's time, 0..1, when the driver says.
+    pub busy: Option<f32>,
+    pub mem_mb: Option<f32>,
 }
 
 impl Proc {

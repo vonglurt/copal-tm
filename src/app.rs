@@ -360,6 +360,14 @@ impl App {
             return true;
         }
         let f = self.filter.to_ascii_lowercase();
+        // Two words that are not names: what is on the GPU, and what was
+        // started over SSH (fleet jobs).
+        match f.as_str() {
+            ":gpu" => return p.gpu.is_some(),
+            ":cuda" => return p.gpu.is_some_and(|u| u.compute),
+            ":ssh" => return p.remote.is_some(),
+            _ => {}
+        }
         p.name.to_ascii_lowercase().contains(&f)
             || p.cmdline.to_ascii_lowercase().contains(&f)
             || p.user.to_ascii_lowercase().contains(&f)

@@ -661,7 +661,7 @@ fn slot(app: &App) -> (f32, String, String, String) {
             (f, fmt::pct(f), "Swap".into(), fmt::kb(s.mem.swap_used_kb))
         }
         _ => match s.gpu {
-            Some(g) => (g, fmt::pct(g), "GPU".into(), "render busy".into()),
+            Some(g) => (g, fmt::pct(g), "GPU".into(), gpu_caption(s)),
             None => (
                 s.disk.busy,
                 fmt::pct(s.disk.busy),
@@ -670,6 +670,34 @@ fn slot(app: &App) -> (f32, String, String, String) {
             ),
         },
     }
+}
+
+/// The GPU tile's caption: an NVIDIA card's memory, power and heat, or what
+/// `/sys` means by its figure.
+fn gpu_caption(s: &copal_tm::machine::Snapshot) -> String {
+    let Some(g) = &s.gpu_card else {
+        return "render busy".into();
+    };
+    // The CUDA jobs first: a narrow tile clips from the right.
+    let mut parts = Vec::new();
+    let jobs = s
+        .procs
+        .iter()
+        .filter(|p| p.gpu.is_some_and(|u| u.compute))
+        .count();
+    if jobs > 0 {
+        parts.push(format!("{jobs} CUDA"));
+    }
+    if let (Some(u), Some(t)) = (g.used_mb, g.total_mb) {
+        parts.push(format!("{:.1}/{:.0} GB", u / 1024.0, t / 1024.0));
+    }
+    if let Some(w) = g.watts {
+        parts.push(format!("{w:.0} W"));
+    }
+    if let Some(c) = g.celsius {
+        parts.push(format!("{c:.0}\u{b0}"));
+    }
+    parts.join(" \u{b7} ")
 }
 
 /// Under 80 columns: four horizontal ladders and the headline figures.
@@ -725,18 +753,27 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
     app.rows_visible = (body.h - 1).max(1) as usize;
 
     let wide = body.w >= 100;
+    // A GPU% column where an NVIDIA card is read: the share of the card each
+    // process has, which is what tells a CUDA job from one waiting on it.
+    let gpu_col = wide && app.snap.gpu_card.is_some();
     let cols: Vec<Col> = if wide {
-        vec![
+        let mut v = vec![
             Col::num("PID", 7),
             Col::fixed("USER", 9),
             Col::fixed("S", 1),
             Col::num("THR", 4),
             Col::num("CPU%", 6),
+        ];
+        if gpu_col {
+            v.push(Col::num("GPU%", 6));
+        }
+        v.extend([
             Col::num("MEM%", 6),
             Col::num("RSS", 9),
             Col::num("TIME+", 9),
             Col::flex("COMMAND", 16),
-        ]
+        ]);
+        v
     } else {
         vec![
             Col::num("PID", 7),
@@ -810,6 +847,16 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
         let cpu = fmt::pct(row.cpu);
         put(i, &cpu, if row.cpu > 0.10 { t.green } else { row_fg });
         i += 1;
+        if gpu_col {
+            // A process on the card with no share yet (CUDA set up, no
+            // kernel running) is a dot, not a blank: it holds the card.
+            let g = match p.gpu {
+                Some(u) => u.busy.map(fmt::pct).unwrap_or_else(|| "\u{b7}".into()),
+                None => String::new(),
+            };
+            put(i, &g, t.gpu);
+            i += 1;
+        }
         if wide {
             put(i, &fmt::pct(row.rss_kb as f32 / total_mem), t.dim);
             i += 1;
@@ -945,6 +992,19 @@ fn inspector(app: &mut App, c: &mut Canvas, r: Rect) {
             );
             let age = (app.snap.uptime - p.start_s).max(0.0);
             line(c, "elapsed", &fmt::uptime(age), t.text);
+            if let Some(u) = p.gpu {
+                let mut v = vec![if u.compute { "CUDA" } else { "graphics" }.to_string()];
+                if let Some(b) = u.busy {
+                    v.push(fmt::pct(b));
+                }
+                if let Some(m) = u.mem_mb {
+                    v.push(format!("{m:.0} MB"));
+                }
+                line(c, "gpu", &v.join(" \u{b7} "), t.gpu);
+            }
+            if let Some(a) = &p.remote {
+                line(c, "started over", &format!("SSH from {a}"), t.net);
+            }
             if let Supervision::OpenRc(n) = &p.supervision {
                 line(c, "service", &format!("OpenRC: {n}"), t.net);
             }
@@ -1460,7 +1520,7 @@ fn help(app: &mut App, c: &mut Canvas, r: Rect) {
         ("Enter, i", "Inspector; 1-5 choose its section"),
         ("Space", "mark a process"),
         ("t / s / r", "tree / sort / reverse"),
-        ("/ , K", "filter; show kernel threads"),
+        ("/ , K", "filter (:gpu :cuda :ssh); kernel threads"),
         ("k", "Services - send one signal"),
         ("x", "Halt plan - the considered one"),
         ("T", "Transcript"),

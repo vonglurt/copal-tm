@@ -76,6 +76,8 @@ pub struct Backend {
     thermal_at: f64,
     gpu: Option<f32>,
     gpu_at: f64,
+    nvidia: Option<super::nvidia::Nvidia>,
+    remote: HashMap<i32, (f64, Option<String>)>,
     power: Power,
     power_at: f64,
     freq: Vec<u64>,
@@ -104,6 +106,8 @@ impl Backend {
             thermal_at: f64::MIN,
             gpu: None,
             gpu_at: f64::MIN,
+            nvidia: super::nvidia::Nvidia::start(),
+            remote: HashMap::new(),
             power: Power::default(),
             power_at: f64::MIN,
             freq: Vec::new(),
@@ -139,6 +143,12 @@ impl Backend {
             self.gpu_at = now;
         }
         s.gpu = self.gpu;
+        // A discrete NVIDIA card is the one worth watching, before an
+        // integrated GPU that answers through /sys.
+        if let Some((busy, card)) = self.nvidia.as_ref().and_then(|n| n.card()) {
+            s.gpu = Some(busy);
+            s.gpu_card = Some(card);
+        }
         if now - self.power_at >= P_BATTERY {
             self.power = power();
             self.power_at = now;
@@ -333,6 +343,8 @@ impl Backend {
             return;
         };
         let mut seen: HashMap<i32, (f64, f64)> = HashMap::new();
+        let mut remote: HashMap<i32, (f64, Option<String>)> = HashMap::new();
+        let on_gpu = self.nvidia.as_ref().map(|n| n.procs()).unwrap_or_default();
         let mut out = Vec::with_capacity(256);
         for e in dir.flatten() {
             let nm = e.file_name();
@@ -356,9 +368,18 @@ impl Backend {
                 }
             }
             seen.insert(pid, (cpu_time, p.start_s));
+            // Read once a process: a pid's environ is fixed at exec.
+            p.remote = match self.remote.get(&pid) {
+                Some((start, r)) if *start == p.start_s => r.clone(),
+                _ if p.kernel_thread => None,
+                _ => ssh_client(pid),
+            };
+            remote.insert(pid, (p.start_s, p.remote.clone()));
+            p.gpu = on_gpu.get(&pid).copied();
             out.push(p);
         }
         self.prev_proc = seen;
+        self.remote = remote;
 
         // Row 8 of the schedule: the expensive per-process file, for the rows
         // that are actually on screen.
@@ -706,6 +727,17 @@ fn thermal() -> Thermal {
         t.hottest_c = Some(*c);
     }
     t
+}
+
+/// The client address in a process's `SSH_CONNECTION` (`client port server
+/// port`), if it has one and its `environ` can be read.
+fn ssh_client(pid: i32) -> Option<String> {
+    let env = fs::read(format!("/proc/{pid}/environ")).ok()?;
+    env.split(|&b| b == 0).find_map(|v| {
+        let v = v.strip_prefix(b"SSH_CONNECTION=")?;
+        let v = std::str::from_utf8(v).ok()?;
+        v.split_whitespace().next().map(str::to_string)
+    })
 }
 
 /// Every way a Linux machine will admit to a GPU load, in the order they are

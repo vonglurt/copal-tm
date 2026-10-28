@@ -184,6 +184,24 @@ says is ignored, doubling the grace on anything trapped, always ending on
 `KILL` — and the Transcript records **which rung actually worked**, which is the
 piece of knowledge the whole feature exists to produce.
 
+## What is on the GPU, and what came over SSH
+
+On a machine with an NVIDIA card (the fleet's CUDA node), the GPU meter and
+tile read the card through `nvidia-smi`, which the proprietary driver needs
+because it tells `/sys` nothing: two copies, `dmon` and `pmon`, started once
+and left running, a line every two seconds, rather than a new `nvidia-smi`
+each tick. The tile shows memory, watts, heat and how many CUDA jobs hold the
+card; the browser gains a **GPU%** column, each process's share of the card;
+`/:cuda` lists the CUDA jobs. The cost, measured on calber (GTX 1080 Ti,
+driver 580): each `nvidia-smi` uses 1 to 2% of a core and 21 MB, shown in
+the table like any other process.
+
+A process started over SSH keeps the client's address in its
+`SSH_CONNECTION` after the session ends, under `nohup` or `tmux`: that is a
+fleet job, in copal-tm's terms. `/:ssh` lists them, and the Inspector says
+where each came from. It is read once a process, and only where `environ`
+is readable: your own processes, or all of them as root.
+
 ## What is it doing on the network?
 
 Linux keeps no per-process network table. It keeps two halves of one, joined by
@@ -345,7 +363,7 @@ was produced that way, so none of them can drift from the program.
 | `Enter`, `i` | Inspector; `1`–`5` for Attributes, Contents, Network, Tools, Access |
 | `Space` | mark a process |
 | `t` `s` `r` | tree / sort / reverse |
-| `/` `K` | filter; show kernel threads |
+| `/` `K` | filter, by name, user or pid, or `:gpu`, `:cuda` (on an NVIDIA card) and `:ssh` (started over SSH: fleet jobs); show kernel threads |
 | **`k`** | **Services** — send one signal, with its disposition beside it |
 | **`x`** | **Halt plan** — the considered one |
 | `T` | Transcript — every signal sent, every refusal, and why |
