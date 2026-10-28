@@ -149,7 +149,10 @@ pub struct App {
 
 impl App {
     pub fn new(cfg: Config, notes: Vec<String>) -> App {
-        let theme = Theme::named(&cfg.theme, cfg.charset);
+        let mut theme = Theme::named(&cfg.theme, cfg.charset);
+        if !cfg.truecolor {
+            theme = theme.sixteen();
+        }
         let machine = if cfg.simulate {
             Machine::simulated()
         } else {

@@ -344,6 +344,7 @@ impl Config {
             match self.charset {
                 Charset::Full => "full",
                 Charset::Blocks => "blocks",
+                Charset::Console => "console",
                 Charset::Ascii => "ascii",
             },
             if self.truecolor { "truecolor" } else { "16" },
@@ -389,7 +390,7 @@ usage: copal-tm [options]
 
   --refresh SECONDS      tick period, 0.25 .. 10          (default 1.0)
   --view MODE            split | dashboard | browser      (default split)
-  --charset SET          auto | full | blocks | ascii
+  --charset SET          auto | full | blocks | console | ascii
   --color MODE           auto | truecolor | 16
   --sys.meters LIST      cpu,battery,temp,gpu,mem,swap,io,net,load,pressure
   --sys.readout WHICH    power | remaining | uptime | load | temp | pressure

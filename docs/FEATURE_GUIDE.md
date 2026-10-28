@@ -374,7 +374,7 @@ carries nothing; shape carries everything.*
 
 The degradation, from the README: **width** 132+ full, 100–131 a narrower Roll, 80–99 no Roll,
 under 80 the gauge rail; **colour** true colour, or the nearest of sixteen ANSI colours computed
-per cell; **glyphs** braille → half blocks → `*` and `+ - |`. In 0.1.3 the `ascii` set is not yet
+per cell; **glyphs** braille → half blocks → the Linux console's own (`console`) → `*` and `+ - |`. In 0.1.3 the `ascii` set is not yet
 pure ASCII: the legend's `◈`, the tree's `▾`, the tile icons, the core strip and the `·`
 separators still come through, as the picture shows.
 

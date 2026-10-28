@@ -14,7 +14,7 @@ mod transcript;
 use std::sync::mpsc::RecvTimeoutError;
 use std::time::Duration;
 
-use copal_tm::tty::{input_channel, Canvas, Key, Term};
+use copal_tm::tty::{input_channel, Canvas, Charset, Key, Term};
 
 use crate::app::App;
 use crate::config::{Config, USAGE};
@@ -75,6 +75,7 @@ fn main() {
 /// to give the histories something to show.
 fn still(mut cfg: Config, notes: Vec<String>, w: i32, h: i32, open: Option<&str>) -> String {
     let truecolor = cfg.truecolor;
+    let console = cfg.charset == Charset::Console;
     cfg.mouse = false;
     let mut app = App::new(cfg, notes);
     for _ in 0..240 {
@@ -88,6 +89,7 @@ fn still(mut cfg: Config, notes: Vec<String>, w: i32, h: i32, open: Option<&str>
     }
     let mut canvas = Canvas::new(w, h);
     canvas.truecolor = truecolor;
+    canvas.console = console;
     let mut out = String::new();
     draw::frame(&mut app, &mut canvas);
     canvas.flush(&mut out);
@@ -97,6 +99,7 @@ fn still(mut cfg: Config, notes: Vec<String>, w: i32, h: i32, open: Option<&str>
 
 fn run(cfg: Config, notes: Vec<String>) -> std::io::Result<()> {
     let truecolor = cfg.truecolor;
+    let console = cfg.charset == Charset::Console;
     let mouse = cfg.mouse;
     let mut app = App::new(cfg, notes);
 
@@ -105,6 +108,7 @@ fn run(cfg: Config, notes: Vec<String>) -> std::io::Result<()> {
     let (w, h) = Term::size_slow();
     let mut canvas = Canvas::new(w, h);
     canvas.truecolor = truecolor;
+    canvas.console = console;
 
     app.tick();
     let mut out = String::with_capacity(1 << 16);

@@ -369,7 +369,7 @@ slot.tile      = gpu          # gpu | swap-rate | load | processes | throttle
 cpu.scale      = total        # 100% is the whole machine, or one core
 halt.grace     = 2.0          # seconds between rungs of the ladder
 halt.confirm   = true         # never false without an explicit edit
-charset        = auto         # full | blocks | ascii
+charset        = auto         # full | blocks | console | ascii
 theme          = copal        # copal | mono
 ```
 
@@ -378,11 +378,14 @@ theme          = copal        # copal | mono
 | | |
 |---|---|
 | **width** | 132+ full; 100–131 a narrower Roll; 80–99 no Roll; under 80 the dashboard becomes a gauge rail and the browser takes the room |
-| **colour** | true colour, or the nearest of sixteen ANSI colours computed per cell |
-| **glyphs** | braille (2×4 dots) → half blocks (1×2) → `*` and `+ - \|` |
+| **colour** | true colour, or sixteen ANSI colours: a hue by its angle, a grey by its brightness, and every ground one of the eight dark backgrounds, never grey or white |
+| **glyphs** | braille (2×4 dots) → half blocks (1×2) → the console's own `■ █ ─ │` → `*` and `+ - \|` |
 
-`charset = blocks` for a Linux console whose font has no braille; `theme = mono`
-where colour is not to be trusted. Shape carries everything: the ladders, the
+`charset = console` (chosen by itself under `TERM=linux`) for the Linux kernel
+console, whose fonts have the box lines, `█ ■ ▮ ● ♦ ◀ ·` and little else: no
+braille, no half blocks, no eighths. Every other glyph is swapped for one the
+font has as the frame is written. `charset = blocks` for a terminal font with
+half blocks but no braille; `theme = mono` where colour is not to be trusted. Shape carries everything: the ladders, the
 plots and the tables are all legible without a single hue difference.
 
 ## Credit

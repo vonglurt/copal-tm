@@ -7,6 +7,7 @@
 //! tick once a second costs a few dozen bytes rather than a full screen.
 
 use crate::tty::color::Rgb;
+use crate::tty::glyphs::console_glyph;
 use std::fmt::Write as _;
 
 pub const BOLD: u8 = 1;
@@ -150,6 +151,9 @@ pub struct Canvas {
     force: bool,
     /// Set false for terminals without direct colour; cells fall back to ANSI 16.
     pub truecolor: bool,
+    /// Set for the Linux console's font (`Charset::Console`): each glyph is
+    /// written as one the font has (`console_glyph`).
+    pub console: bool,
 }
 
 impl Canvas {
@@ -162,6 +166,7 @@ impl Canvas {
             prev: vec![Cell::blank(Rgb(1, 1, 1)); n],
             force: true,
             truecolor: true,
+            console: false,
         }
     }
 
@@ -373,16 +378,17 @@ impl Canvas {
                     if self.truecolor {
                         let _ = write!(out, "\x1b[48;2;{};{};{}m", c.bg.0, c.bg.1, c.bg.2);
                     } else {
-                        let a = c.bg.ansi16();
-                        let _ = if a < 8 {
-                            write!(out, "\x1b[{}m", 40 + a)
-                        } else {
-                            write!(out, "\x1b[{}m", 100 + a - 8)
-                        };
+                        // Eight dark grounds only (Rgb::ansi8_bg): never a
+                        // white or bright block behind the text.
+                        let _ = write!(out, "\x1b[{}m", 40 + c.bg.ansi8_bg());
                     }
                     bg = Some(c.bg);
                 }
-                out.push(c.ch);
+                out.push(if self.console {
+                    console_glyph(c.ch)
+                } else {
+                    c.ch
+                });
                 cx += 1;
                 self.prev[i] = c;
             }

@@ -39,6 +39,7 @@ fn dots(cs: Charset) -> (i32, i32) {
     match cs {
         Charset::Full => (2, 4),
         Charset::Blocks => (1, 2),
+        Charset::Console => (1, 1),
         Charset::Ascii => (1, 1),
     }
 }
@@ -152,6 +153,7 @@ fn glyph(cs: Charset, mask: u8) -> char {
             b.ch()
         }
         Charset::Blocks => half_block(mask & 1 != 0, mask & 2 != 0).unwrap_or(' '),
+        Charset::Console => '■',
         Charset::Ascii => '*',
     }
 }

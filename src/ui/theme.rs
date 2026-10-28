@@ -37,6 +37,8 @@ pub struct Theme {
     pub heat: [Rgb; 3],
     pub cool: [Rgb; 3],
     pub cs: Charset,
+    /// Drawn with sixteen colours (`Theme::sixteen`).
+    pub sixteen: bool,
 }
 
 impl Default for Theme {
@@ -72,6 +74,7 @@ impl Theme {
             heat: [Rgb::hex(0x55D97A), Rgb::hex(0xF2E34A), Rgb::hex(0xF0453A)],
             cool: [Rgb::hex(0x1E3A5F), Rgb::hex(0x4FA8F5), Rgb::hex(0x9BD4FF)],
             cs,
+            sixteen: false,
         }
     }
 
@@ -102,6 +105,17 @@ impl Theme {
         t
     }
 
+    /// The same palette for a terminal with sixteen colours (the Linux
+    /// console). Every ground there is black, since its eight backgrounds
+    /// have no dark greys (`Rgb::ansi8_bg`), so the selection's slate would be
+    /// black too and the selected row would not show. It is blue instead,
+    /// saturated enough to stay blue when dimmed for an unfocused table.
+    pub fn sixteen(mut self) -> Theme {
+        self.sel = Rgb::hex(0x1A4FD0);
+        self.sixteen = true;
+        self
+    }
+
     pub fn named(name: &str, cs: Charset) -> Theme {
         match name.trim().to_ascii_lowercase().as_str() {
             "mono" => Theme::mono(cs),
@@ -127,9 +141,11 @@ impl Theme {
         hue.on(self.track(hue), f.clamp(0.0, 1.0))
     }
 
-    /// The fill under an area chart.
+    /// The fill under an area chart. With sixteen colours a fifth of the hue
+    /// is a grey (`Rgb::ansi16`), and the memory chart's area went grey with
+    /// it; half keeps it the series' own colour at normal intensity.
     pub fn wash(&self, hue: Rgb) -> Rgb {
-        hue.on(self.panel, 0.18)
+        hue.on(self.panel, if self.sixteen { 0.5 } else { 0.18 })
     }
 
     /// The unlit cells of a dot-matrix title strip.
@@ -165,6 +181,19 @@ mod tests {
         assert_eq!(t.partial(t.green, 0.0), t.track(t.green));
         assert_eq!(t.partial(t.green, 1.0), t.green);
         assert!(t.partial(t.green, 0.5).luma() > t.track(t.green).luma());
+    }
+
+    #[test]
+    fn the_selection_shows_with_sixteen_colours() {
+        let t = Theme::copal(Charset::Ascii).sixteen();
+        assert_eq!(t.sel.ansi8_bg(), 4);
+        assert_eq!(t.sel.dark(0.35).ansi8_bg(), 4, "unfocused");
+        assert_eq!(Theme::copal(Charset::Ascii).sel.ansi8_bg(), 0);
+        assert_eq!(
+            t.wash(t.magenta).ansi16(),
+            5,
+            "the memory area keeps its hue"
+        );
     }
 
     #[test]
