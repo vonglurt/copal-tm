@@ -3,9 +3,10 @@
 //! Every reading `copal-tm` takes, and the reasoning about what may be done
 //! with a process once it has been read.
 //!
-//! Two back ends behind one `Machine`: `linux`, which reads `/proc` and `/sys`
-//! on the schedule of the design report's Section VII, and `sim`, which makes
-//! plausible readings on a machine that has neither.  Which one is compiled
+//! Three back ends behind one `Machine`: `linux`, which reads `/proc` and
+//! `/sys` on the schedule of the design report's Section VII; `macos`, which
+//! takes the same readings from the kernel's own calls; and `sim`, which makes
+//! plausible readings on a machine that has none of them.  Which one is compiled
 //! in is decided by the target, and the choice is visible in every snapshot -
 //! `Snapshot::simulated` is not something the interface is allowed to forget.
 //!
@@ -23,12 +24,16 @@ pub mod types;
 
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
 #[cfg(target_os = "linux")]
 mod nvidia;
 mod sim;
 
 #[cfg(target_os = "linux")]
 use linux as native;
+#[cfg(target_os = "macos")]
+use macos as native;
 
 pub use halt::{Addressee, Plan, Severity, Warning};
 pub use ring::Ring;
@@ -38,7 +43,7 @@ pub use types::*;
 /// Which back end a `Machine` is using.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Source {
-    /// `/proc` and `/sys` on this machine.
+    /// This machine's own readings: `/proc` and `/sys`, or macOS's calls.
     Native,
     /// Made up, and saying so.
     Simulated,
@@ -51,7 +56,7 @@ pub enum Source {
 // That is the wrong trade for an allocation made once at startup.
 #[allow(clippy::large_enum_variant)]
 enum Inner {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     Native(native::Backend),
     Sim(sim::Backend),
 }
@@ -77,6 +82,11 @@ impl Machine {
                 return Machine::with(Inner::Native(native::Backend::new()), Source::Native);
             }
         }
+        #[cfg(target_os = "macos")]
+        {
+            return Machine::with(Inner::Native(native::Backend::new()), Source::Native);
+        }
+        #[allow(unreachable_code)]
         Machine::with(Inner::Sim(sim::Backend::new()), Source::Simulated)
     }
 
@@ -114,7 +124,7 @@ impl Machine {
         let dt = (now - self.last).max(1e-6);
         self.last = now;
         let mut s = match &mut self.inner {
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             Inner::Native(b) => b.sample(now, dt, visible),
             Inner::Sim(b) => b.sample(now, dt, visible),
         };
@@ -129,7 +139,7 @@ impl Machine {
     /// The Inspector's readings, for one process, on selection.
     pub fn detail(&mut self, pid: i32) -> Option<Detail> {
         match &mut self.inner {
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             Inner::Native(b) => b.detail(pid),
             Inner::Sim(b) => b.detail(pid),
         }
@@ -140,7 +150,7 @@ impl Machine {
     /// reaches the simulated table and nothing else.
     pub fn signal(&mut self, target: i32, sig: i32) -> Result<(), std::io::Error> {
         match &mut self.inner {
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             Inner::Native(_) => signals::send(target, sig),
             Inner::Sim(b) => b.signal(target, sig),
         }
@@ -149,7 +159,7 @@ impl Machine {
     /// Is this process still there?  Asked of whichever table it came from.
     pub fn alive(&self, pid: i32) -> bool {
         match &self.inner {
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             Inner::Native(_) => signals::alive(pid),
             Inner::Sim(b) => b.alive(pid),
         }
@@ -254,7 +264,7 @@ mod tests {
         assert!(m.signal(1, signals::SIGTERM.num).is_err());
     }
 
-    /// On Linux this exercises the real reader; everywhere else it is the
+    /// On Linux and macOS this exercises the real reader; everywhere else it is the
     /// simulation, and either way the invariants are the same.
     #[test]
     fn a_native_probe_reads_this_machine() {

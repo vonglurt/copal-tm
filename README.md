@@ -263,7 +263,7 @@ One crate named after the program, and three modules inside it:
 | module | what it owns |
 |---|---|
 | `tty` | colour, a damage-tracked cell canvas, the glyph vocabulary and its fallbacks, raw mode, key decoding |
-| `machine` | every reading — `/proc`, `/sys`, and the simulation — plus signal dispositions and halt plans |
+| `machine` | every reading — `/proc` and `/sys`, macOS's calls, and the simulation — plus signal dispositions and halt plans |
 | `ui` | the widgets: title strips, ladder meters, strip charts, stat tiles, tables |
 
 The binary — configuration, layout, the event loop, the Transcript — is the
@@ -341,7 +341,9 @@ make install    # into ~/.local/bin
 ```
 
 It targets Alpine and was written on a Mac. Everything but the `machine`
-module's Linux back end is portable, and on a machine with no `/proc` it makes plausible
+module's back ends is portable. On a Mac it reads the machine through macOS's
+own calls (another user's process, without root, shows a dash where its CPU
+and memory would be). On any other machine with no `/proc` it makes plausible
 readings over a synthetic process tree that contains — deliberately — every case
 the halt ladder reasons about: a wrapped child, a zombie, a `D`-state, a stopped
 process, a supervised daemon, and one that ignores `SIGTERM`. It never pretends:

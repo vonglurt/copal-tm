@@ -244,6 +244,10 @@ pub struct Proc {
     /// per process, and only where `environ` is readable (the user's own
     /// processes, or all of them as root).
     pub remote: Option<String>,
+    /// The kernel would not say: on macOS, another user's process read
+    /// without root.  Its CPU, memory, threads and time are unknown, and are
+    /// drawn as a dash, never as zero.
+    pub unread: bool,
 }
 
 /// An NVIDIA card, or the sum of several.

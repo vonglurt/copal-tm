@@ -542,6 +542,7 @@ fn synthetic_tree() -> Vec<Proc> {
             sig: Some(sig),
             gpu: None,
             remote: None,
+            unread: false,
         });
     };
 

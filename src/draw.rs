@@ -840,11 +840,14 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
         }
         put(i, &p.state.to_string(), mark_of(app, &p, &t).1);
         i += 1;
+        // A row the kernel would not read, and not rolled up: a dash, not 0.
+        let dash = p.unread && row.hidden == 0;
+        let or_dash = |v: String| if dash { "-".to_string() } else { v };
         if wide {
-            put(i, &p.threads.to_string(), t.dim);
+            put(i, &or_dash(p.threads.to_string()), t.dim);
             i += 1;
         }
-        let cpu = fmt::pct(row.cpu);
+        let cpu = or_dash(fmt::pct(row.cpu));
         put(i, &cpu, if row.cpu > 0.10 { t.green } else { row_fg });
         i += 1;
         if gpu_col {
@@ -858,13 +861,13 @@ fn browser(app: &mut App, c: &mut Canvas, r: Rect) {
             i += 1;
         }
         if wide {
-            put(i, &fmt::pct(row.rss_kb as f32 / total_mem), t.dim);
+            put(i, &or_dash(fmt::pct(row.rss_kb as f32 / total_mem)), t.dim);
             i += 1;
         }
-        put(i, &fmt::kb(row.rss_kb), t.dim);
+        put(i, &or_dash(fmt::kb(row.rss_kb)), t.dim);
         i += 1;
         if wide {
-            put(i, &fmt::cputime(p.cpu_time), t.dim);
+            put(i, &or_dash(fmt::cputime(p.cpu_time)), t.dim);
             i += 1;
         }
 
@@ -975,19 +978,23 @@ fn inspector(app: &mut App, c: &mut Canvas, r: Rect) {
             line(c, "group", &format!("{}", p.pgid), t.text);
             line(c, "session", &format!("{}", p.sid), t.text);
             line(c, "user", &p.user, t.text);
-            line(c, "threads", &p.threads.to_string(), t.text);
+            if p.unread {
+                line(c, "unread", "another user's; run as root to read", t.text);
+            }
+            let or_dash = |v: String| if p.unread { "-".to_string() } else { v };
+            line(c, "threads", &or_dash(p.threads.to_string()), t.text);
             line(
                 c,
                 "nice / prio",
                 &format!("{} / {}", p.nice, p.prio),
                 t.text,
             );
-            line(c, "cpu", &fmt::pct(p.cpu), t.text);
-            line(c, "cpu time", &fmt::cputime(p.cpu_time), t.text);
+            line(c, "cpu", &or_dash(fmt::pct(p.cpu)), t.text);
+            line(c, "cpu time", &or_dash(fmt::cputime(p.cpu_time)), t.text);
             line(
                 c,
                 "rss / vsz",
-                &format!("{} / {}", fmt::kb(p.rss_kb), fmt::kb(p.vsz_kb)),
+                &or_dash(format!("{} / {}", fmt::kb(p.rss_kb), fmt::kb(p.vsz_kb))),
                 t.text,
             );
             let age = (app.snap.uptime - p.start_s).max(0.0);

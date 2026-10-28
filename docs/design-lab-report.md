@@ -966,11 +966,39 @@ never has to be written from documentation.
 
 The program is for Alpine and is written on a Mac. The `machine` module's Linux back end
 is `#[cfg(target_os = "linux")]`; everything else — the canvas, the widgets,
-the layout, the event loop, the halt ladder's *reasoning* — is portable, and
-on macOS the simulation feeds it. `make demo` is therefore a complete
-rehearsal of the interface on a machine that has no `/proc` at all, which is
-what makes the design of Sections V and VI checkable before any of it is
-carried to the target.
+the layout, the event loop, the halt ladder's *reasoning* — is portable.
+`make demo` runs the simulation on any machine, a complete rehearsal of the
+interface on a machine that has no `/proc` at all, which is what makes the
+design of Sections V and VI checkable before any of it is carried to the
+target.
+
+The Mac now has its own back end, `machine/macos.rs`, so the Mac
+that coordinates a fleet shows itself as the Linux machines do. It reads
+the kernel's own calls, declared beside the layouts they fill, with no
+crates:
+
+| reading | call |
+|---|---|
+| each core's ticks | `host_processor_info(PROCESSOR_CPU_LOAD_INFO)` |
+| memory | `host_statistics64(HOST_VM_INFO64)`: used is app memory, wired and compressed, as Activity Monitor counts it |
+| swap, boot time, core classes, model | `sysctl` (`vm.swapusage`, `kern.boottime`, `hw.perflevelN`, `machdep.cpu.brand_string`) |
+| network | `getifaddrs`, each interface's 32-bit counters differenced wrapping |
+| battery | `pmset -g batt` |
+| every process | `sysctl KERN_PROC_ALL`, as `ps` reads them |
+| CPU time, memory, threads | `PROC_PIDTASKINFO` |
+| command line, `SSH_CONNECTION` | `KERN_PROCARGS2` |
+
+The `kinfo_proc` offsets were checked against `PROC_PIDT_SHORTBSDINFO` on
+every process of an M1 (557, no difference but the name, which `kinfo_proc`
+keeps a byte longer). Apple silicon numbers its efficiency cores first
+(cpu0 to cpu3 on the M1, by `ioreg`'s cluster-type), so the core classes
+are assigned in that order.
+
+macOS answers `PROC_PIDTASKINFO` and `KERN_PROCARGS2` only for the user's
+own processes; `ps` is setuid root for the rest. A process the kernel would
+not read is marked `unread` and its CPU, memory, threads and time are drawn
+as a dash, never as zero. Temperatures, the GPU, pressure stall and the
+disks need IOKit or root, and stay absent.
 
 ### C. Publishing
 
